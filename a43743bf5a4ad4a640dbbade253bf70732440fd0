@@ -1,0 +1,11 @@
+Verified+2: Jenkins
+Code-Review+1: Rosario Di Somma <rosario.disomma@gmail.com>
+Code-Review+2: Simon Pasquier <spasquier@mirantis.com>
+Code-Review+2: Joe Topjian <joe@topjian.net>
+Workflow+1: Joe Topjian <joe@topjian.net>
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Submitted-by: Jenkins
+Submitted-at: Fri, 20 Nov 2015 17:08:01 +0000
+Reviewed-on: https://review.openstack.org/247823
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
