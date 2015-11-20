@@ -21,3 +21,9 @@ The `glance/` directory has useful tools and scripts for glance.
 The `neutron/` directory has useful tools and scripts for neutron.
 
 The `multi/` directory is a tool that crosses multiple projects.
+
+Licensing
+---------
+All contributions will be licensed under the Apache 2.0 License unless you
+state otherwise. Please see the LICENSE file for details about the Apache 2.0
+License.
