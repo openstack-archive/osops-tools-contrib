@@ -1,0 +1,9 @@
+Code-Review+2: Joe Topjian <joe@topjian.net>
+Code-Review+1: Anton Haldin <anton.haldin@gmail.com>
+Workflow+1: Joe Topjian <joe@topjian.net>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 31 Dec 2015 19:54:46 +0000
+Reviewed-on: https://review.openstack.org/262825
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
