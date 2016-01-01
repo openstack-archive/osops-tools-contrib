@@ -1,0 +1,8 @@
+Code-Review+2: Joe Topjian <joe@topjian.net>
+Workflow+1: JJ Asghar <jj@chef.io>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 01 Jan 2016 22:29:46 +0000
+Reviewed-on: https://review.openstack.org/262873
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
