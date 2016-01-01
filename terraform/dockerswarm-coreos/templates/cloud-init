@@ -1,0 +1,50 @@
+#cloud-config
+
+coreos:
+  units:
+    - name: etcd.service
+      mask: true
+    - name: etcd2.service
+      command: start
+    - name: docker.service
+      command: start
+    - name: swarm-agent.service
+      command: enable
+      content: |
+        [Unit]
+        Description=swarm agent
+        Requires=docker.service
+        After=docker.service
+
+        [Service]
+        EnvironmentFile=/etc/environment
+        TimeoutStartSec=20m
+        ExecStartPre=/usr/bin/docker pull swarm:${swarm_version}
+        ExecStartPre=-/usr/bin/docker rm -f swarm-agent
+        ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name swarm-agent swarm:${swarm_version} join --addr=$COREOS_PRIVATE_IPV4:2376 etcd://$COREOS_PRIVATE_IPV4:2379/docker"
+        ExecStop=/usr/bin/docker stop swarm-agent
+    - name: swarm-manager.service
+      command: enable
+      content: |
+        [Unit]
+        Description=swarm manager
+        Requires=docker.service
+        After=docker.service
+
+        [Service]
+        EnvironmentFile=/etc/environment
+        TimeoutStartSec=20m
+        ExecStartPre=/usr/bin/docker pull swarm:${swarm_version}
+        ExecStartPre=-/usr/bin/docker rm -f swarm-manager
+        ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name swarm-manager -v /etc/docker/ssl:/etc/docker/ssl --net=host swarm:${swarm_version} manage --tlsverify --tlscacert=/etc/docker/ssl/ca.pem --tlscert=/etc/docker/ssl/cert.pem --tlskey=/etc/docker/ssl/key.pem etcd://$COREOS_PRIVATE_IPV4:2379/docker"
+        ExecStop=/usr/bin/docker stop swarm-manager
+  etcd2:
+    discovery: ${discovery_url}
+    advertise-client-urls: http://$private_ipv4:2379
+    initial-advertise-peer-urls: http://$private_ipv4:2380
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    listen-peer-urls: http://$private_ipv4:2380,http://$private_ipv4:7001
+    data-dir: /var/lib/etcd2
+    initial-cluster-token: ${cluster_token}
+  update:
+    reboot-strategy: "off"
