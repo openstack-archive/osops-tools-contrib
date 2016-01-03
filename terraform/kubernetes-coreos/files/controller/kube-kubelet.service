@@ -1,0 +1,19 @@
+[Unit]
+Description=kubelet service
+Requires=flanneld.service
+After=flanneld.service
+
+[Service]
+ExecStart=/usr/bin/kubelet \
+  --api_servers=http://127.0.0.1:8080 \
+  --register-node=false \
+  --allow-privileged=true \
+  --config=/etc/kubernetes/manifests \
+  --hostname-override=ADVERTISE_IP \
+  --cluster-dns=CLUSTER_DNS \
+  --cluster-domain=cluster.local
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
