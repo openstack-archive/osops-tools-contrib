@@ -1,0 +1,4 @@
+*.tfstate
+*.tfstate.backup
+files/discovery_url
+*.override
