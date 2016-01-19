@@ -1,0 +1,8 @@
+Code-Review+2: Simon Pasquier <spasquier@mirantis.com>
+Workflow+1: Mike Dorman <mdorman@godaddy.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 19 Jan 2016 18:03:31 +0000
+Reviewed-on: https://review.openstack.org/268790
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
