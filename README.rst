@@ -9,8 +9,14 @@ for the general Operating Community to use with their OpenStack Clouds.
 
 This place is also untested and unverified.
 
+For more details on how to contribute, please follow the Gerrit git-review process
+described at http://docs.openstack.org/infra/manual/developers.html .
+
 If you would like some curated, tested, and verified code please look to the
 `osops-tools-generic <https://github.com/openstack/osops-tools-generic>`_ repository.
+
+Please see the wiki page at https://wiki.openstack.org/wiki/Osops#Overview_moving_code
+for more details about how code is promoted up to the generic repo.
 
 Please remember USE AT YOUR OWN RISK.
 
