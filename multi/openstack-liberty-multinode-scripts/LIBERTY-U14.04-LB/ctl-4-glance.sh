@@ -14,7 +14,7 @@ EOF
 sleep 5
 echo " Create user, endpoint for GLANCE"
 
-openstack user create --password $ADMIN_PASS glance
+openstack user create --password $GLANCE_PASS glance
 openstack role add --project service --user glance admin
 openstack service create --name glance --description \
     "OpenStack Image service" image

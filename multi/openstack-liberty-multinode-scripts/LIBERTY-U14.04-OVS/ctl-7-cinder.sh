@@ -15,7 +15,7 @@ EOF
 
 echo "Create user, endpoint for CINDER"
 sleep 5
-openstack user create --password $ADMIN_PASS cinder
+openstack user create --password $CINDER_PASS cinder
 openstack role add --project service --user cinder admin
 openstack service create --name cinder --description \
     "OpenStack Block Storage" volume

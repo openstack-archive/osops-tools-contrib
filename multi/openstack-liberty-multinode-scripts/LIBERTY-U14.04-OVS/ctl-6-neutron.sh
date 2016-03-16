@@ -24,7 +24,7 @@ EOF
 
 echo "Create user, endpoint for NEUTRON"
 sleep 5
-openstack user create --password $ADMIN_PASS neutron
+openstack user create --password $NEUTRON_PASS neutron
 openstack role add --project service --user neutron admin
 openstack service create --name neutron --description \
     "OpenStack Networking" network
@@ -82,7 +82,7 @@ project_domain_id = default
 user_domain_id = default
 project_name = service
 username = neutron
-password = $KEYSTONE_PASS
+password = $NEUTRON_PASS
 
 
 [database]

@@ -13,7 +13,7 @@ EOF
 
 echo "Creat user, endpoint for NOVA"
 
-openstack user create --password $ADMIN_PASS nova
+openstack user create --password $NOVA_PASS nova
 openstack role add --project service --user nova admin
 openstack service create --name nova --description "OpenStack Compute" compute
 
