@@ -1,0 +1,9 @@
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Code-Review+2: Edgar Magana <emagana@gmail.com>
+Workflow+1: Edgar Magana <emagana@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 04 Apr 2016 16:06:59 +0000
+Reviewed-on: https://review.openstack.org/301060
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
