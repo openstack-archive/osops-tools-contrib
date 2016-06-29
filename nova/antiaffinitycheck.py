@@ -40,6 +40,13 @@ class NovaConnect(object):
         """
         return self.nova.servers.get(serverid)
 
+    def get_all(self):
+        """
+        Get a list of all Server Groups
+        """
+        server_groups = self.nova.server_groups.list(all_projects=True)
+        return server_groups
+
     def get_group_members(self, server_group_id):
         """
         Return list of instance UUIDs present in a Server Group
@@ -61,25 +68,18 @@ class NovaConnect(object):
             ret.append({'id':uid, 'name':instance.name, 'hypervisor':hypervisor})
         return ret
 
-    def print_group_members(self, server_group_id):
+    def get_group_detail(self, server_group_id):
         """
         Output detail on Server Group instances and their hypervisors
         """
         group_members = self.get_group_members(server_group_id)
         if group_members:
             output = self.get_hypervisors(group_members)
-            if self.json:
-                print json.dumps(output)
-            else:
-                table = create_table(['Instance ID', 'Instance Name', 'Hypervisor'])
-                for instance in output:
-                    table.add_row([instance['id'], instance['name'], instance['hypervisor']])
-                print table
+            return output
         else:
-            print "Server Group", server_group_id,\
-                    "empty or does not have an anti-affinity policy set."
+            return False
 
-    def print_group_duplicates(self, server_group_id):
+    def test_group_duplicates(self, server_group_id):
         """
         Evaluate whether any instances in a SG
         have been scheduled to the same hypervisor
@@ -89,27 +89,34 @@ class NovaConnect(object):
             hypervisors = []
             instances = self.get_hypervisors(group_members)
             for instance in instances:
+                instance['server_group_id'] = server_group_id
                 hypervisors.append(instance['hypervisor'])
             dupes = [k for k, v in Counter(hypervisors).items() if v > 1]
             if dupes:
                 instance_dupes = [instance for instance in instances
                                   if instance['hypervisor'] in dupes]
-                if self.json:
-                    print json.dumps(instance_dupes)
-                else:
-                    print "Anti-affinity rules violated in Server Group:",\
-                            server_group_id
-                    table = create_table(['Instance ID', 'Instance Name', 'Hypervisor'])
-                    for instance in instance_dupes:
-                        table.add_row([instance['id'], instance['name'], instance['hypervisor']])
-                    print table
+                return instance_dupes
             else:
-                if not self.json:
-                    print "No anti-affinity rules violated for Server Group:", server_group_id
+                return False
         else:
-            if not self.json:
-                print "Server Group", server_group_id,\
-                    "empty or does not have an anti-affinity policy set."
+            return False
+
+    def check_all(self):
+        """
+        Check all server groups for violations
+        """
+        groups = self.get_all()
+        merged_output = []
+        for group in groups:
+            output = self.test_group_duplicates(group.id)
+            if output and self.json:
+                merged_output += output
+            elif output and not self.json:
+                print "Anti-affinity rules violated in Server Group:",\
+                            group.id
+                print_table(output)
+        if self.json:
+            print json.dumps(merged_output)
 
 def create_table(fields):
     """
@@ -119,14 +126,25 @@ def create_table(fields):
     table.align = 'l'
     return table
 
+def print_table(output):
+    """
+    Print out a table of instances
+    """
+    table = create_table(['Instance ID', 'Instance Name', 'Hypervisor'])
+    for instance in output:
+        table.add_row([instance['id'], instance['name'], instance['hypervisor']])
+    print table
+
 def get_args():
     """
     Get commandline arguments
     """
     parser = argparse.ArgumentParser(description='Nova Server Group anti-affinity rule checker')
-    parser.add_argument('--check', type=str, help='Validate the specified Server Group')
-    parser.add_argument('--list', type=str,
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--check', type=str, help='Validate the specified Server Group')
+    group.add_argument('--list', type=str,
                         help='List instances and their hypervisors for a given Server Group')
+    group.add_argument('--all', action='store_true', help='Check all server groups')
     parser.add_argument('--json', action='store_true', help='Output JSON')
     return parser.parse_args()
 
@@ -137,9 +155,26 @@ def main():
     args = get_args()
     nova_connect = NovaConnect(args)
     if args.check:
-        nova_connect.print_group_duplicates(args.check)
+        output = nova_connect.test_group_duplicates(args.check)
+        if output and args.json:
+            print json.dumps(output)
+        elif output and not args.json:
+            print "Anti-affinity rules violated in Server Group:",\
+                            args.check
+            print_table(output)
+        elif not output and not args.json:
+            print "No anti-affinity rules violated for Server Group:", args.check
     if args.list:
-        nova_connect.print_group_members(args.list)
+        output = nova_connect.get_group_detail(args.list)
+        if output and args.json:
+            print json.dumps(output)
+        elif output and not args.json:
+            print_table(output)
+        elif not output and not args.json:
+            print "Server Group", args.list,\
+                "empty or does not have an anti-affinity policy set."
+    if args.all:
+        nova_connect.check_all()
 
 if __name__ == '__main__':
     main()
