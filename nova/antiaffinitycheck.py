@@ -64,8 +64,12 @@ class NovaConnect(object):
         ret = []
         for uid in uid_list:
             instance = self.get_server(uid)
-            hypervisor = getattr(instance, 'OS-EXT-SRV-ATTR:hypervisor_hostname'.split('.')[0])
-            ret.append({'id':uid, 'name':instance.name, 'hypervisor':hypervisor})
+            hypervisor = getattr(instance,
+                                 'OS-EXT-SRV-ATTR:hypervisor_hostname'
+                                 .split('.')[0])
+            ret.append({'id':uid,
+                        'name':instance.name,
+                        'hypervisor':hypervisor})
         return ret
 
     def get_group_detail(self, server_group_id):
@@ -115,7 +119,7 @@ class NovaConnect(object):
                 print "Anti-affinity rules violated in Server Group:",\
                             group.id
                 print_table(output)
-        if self.json:
+        if self.json and merged_output:
             print json.dumps(merged_output)
 
 def create_table(fields):
@@ -132,19 +136,25 @@ def print_table(output):
     """
     table = create_table(['Instance ID', 'Instance Name', 'Hypervisor'])
     for instance in output:
-        table.add_row([instance['id'], instance['name'], instance['hypervisor']])
+        table.add_row([instance['id'],
+                       instance['name'],
+                       instance['hypervisor']])
     print table
 
 def get_args():
     """
     Get commandline arguments
     """
-    parser = argparse.ArgumentParser(description='Nova Server Group anti-affinity rule checker')
+    parser = argparse.ArgumentParser(description='Nova Server Group \
+                                            anti-affinity rule checker')
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--check', type=str, help='Validate the specified Server Group')
+    group.add_argument('--check', type=str,
+                       help='Validate the specified Server Group')
     group.add_argument('--list', type=str,
-                        help='List instances and their hypervisors for a given Server Group')
-    group.add_argument('--all', action='store_true', help='Check all server groups')
+                       help='List instances and their hypervisors \
+                               for a given Server Group')
+    group.add_argument('--all', action='store_true',
+                       help='Check all server groups')
     parser.add_argument('--json', action='store_true', help='Output JSON')
     return parser.parse_args()
 
@@ -163,7 +173,8 @@ def main():
                             args.check
             print_table(output)
         elif not output and not args.json:
-            print "No anti-affinity rules violated for Server Group:", args.check
+            print "No anti-affinity rules \
+                    violated for Server Group:", args.check
     if args.list:
         output = nova_connect.get_group_detail(args.list)
         if output and args.json:
