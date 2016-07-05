@@ -1,9 +1,10 @@
 flannel_backend = "vxlan"
 flannel_network = "10.10.0.0/16"
-kubernetes_image = "coreos-alpha-884-0-0"
+kubernetes_image = "coreos-stable-1010-6-0"
 portal_net = "10.200.0.0/16"
 cluster_name = "kubestack-testing"
-
+kubectl_version = "v1.2.4"
+hyperkube_version = "v1.2.4"
 public_key_path = "~/.ssh/id_rsa.pub"
 network_name = "internal"
 floatingip_pool = "external"
