@@ -21,7 +21,7 @@ spec:
     - --tls-cert-file=/etc/kubernetes/ssl/controller.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/controller-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
-    - --service-account-key-file=/etc/kubernetes/ssl/admin-key.pem
+    - --service-account-key-file=/etc/kubernetes/ssl/controller-key.pem
     ports:
     - containerPort: 443
       hostPort: 443
