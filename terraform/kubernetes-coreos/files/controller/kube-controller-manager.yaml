@@ -7,12 +7,12 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: gcr.io/google_containers/hyperkube:HYPERKUBE_VERSION
+    image: quay.io/coreos/hyperkube:HYPERKUBE_VERSION
     command:
     - /hyperkube
     - controller-manager
     - --master=http://127.0.0.1:8080
-    - --service-account-private-key-file=/etc/kubernetes/ssl/controller.pem
+    - --service-account-private-key-file=/etc/kubernetes/ssl/controller-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
     livenessProbe:
       httpGet:
