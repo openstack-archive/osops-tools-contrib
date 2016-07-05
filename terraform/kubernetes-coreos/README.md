@@ -164,7 +164,8 @@ need to set up firewall rules for the service port(s) (tcp:32584) to serve traff
 See http://releases.k8s.io/release-1.2/docs/user-guide/services-firewalls.md for more details.
 
 ```
-You can now access the dashboard from your whitelisted IP at http://<controller public ip>:<service port>
+You can now access the dashboard from your whitelisted IP at:
+ ```http://<controller public ip>:<service port>```
 The service port is supplied when you create the dashboard. In the example here, it was 32584.
 
 
