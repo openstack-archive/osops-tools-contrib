@@ -4,8 +4,8 @@ resource "openstack_compute_secgroup_v2" "kubernetes_controller" {
   description = "kubernetes Controller Security Group"
   rule {
     ip_protocol = "tcp"
-    from_port = "443"
-    to_port = "443"
+    from_port = "1"
+    to_port = "65535"
     cidr = "${var.whitelist_network}"
   }
   rule {
