@@ -13,7 +13,7 @@ Will install a single controller node and two compute nodes by default, can incr
 ## Prep
 
 - [Install Terraform](https://www.terraform.io/intro/getting-started/install.html)
-- Upload a CoreOS image to glance.
+- Upload a CoreOS image to glance. [Instructions Here](https://coreos.com/os/docs/latest/booting-on-openstack.html)
 
 ## Terraform
 
@@ -35,6 +35,9 @@ Ensure that you have your Openstack credentials loaded into environment variable
 ```
 $ source ~/.stackrc
 ```
+
+Edit the terraform.tfvars file to put the name of your CoreOS image, OpenStack network names, etc. You'll also set the Kubernetes versions there. For the hyperkube version, you need to use the tags [here](https://quay.io/repository/coreos/hyperkube?tab=tags).
+
 
 ### Provision the Kubernetes Cluster
 
@@ -68,7 +71,7 @@ $ terraform apply \
       -var "whitelist_network=${MY_IP}/32"
 ...
 ...
-Apply complete! Resources: 12 added, 0 changed, 0 destroyed.
+Apply complete! Resources: 16 added, 0 changed, 0 destroyed.
 
 The state of your infrastructure has been saved to the path
 below. This state is required to modify and destroy your
@@ -89,8 +92,6 @@ Outputs:
 ```
 $ ssh -A core@xx.xx.xx.xx
 
-$ kubectl config use-context kubernetes
-switched to context "kubernetes".
 
 $ kubectl config view
 apiVersion: v1
@@ -113,8 +114,9 @@ users:
     token: kubernetes
 
 $ kubectl get nodes  
-NAME          LABELS                               STATUS    AGE
-10.230.7.23   kubernetes.io/hostname=10.230.7.23   Ready     5m
+NAME            STATUS    AGE
+192.168.3.197   Ready     1m
+192.168.3.198   Ready     11s
 ```
 
 
@@ -149,18 +151,21 @@ $ kubectl delete svc my-nginx
 service "my-nginx" deleted
 ```
 
-### Install some addons
+### Install The Dashboard Addon
 
 ```
-$ kubectl create -f /etc/kubernetes/addons/kube-ui-rc.yaml \
-    --namespace=kube-system
-$ kubectl create -f /etc/kubernetes/addons/kube-ui-svc.yaml \
-    --namespace=kube-system
-$ kubectl create -f /etc/kubernetes/addons/kube-dns-rc.yaml \
-    --namespace=kube-system
-$ kubectl create -f /etc/kubernetes/addons/kube-dns-svc.yaml \
-    --namespace=kube-system
+$ kubectl create -f https://rawgit.com/kubernetes/dashboard/master/src/deploy/kubernetes-dashboard.yaml
+
+deployment "kubernetes-dashboard" created
+You have exposed your service on an external port on all nodes in your
+cluster.  If you want to expose this service to the external internet, you may
+need to set up firewall rules for the service port(s) (tcp:32584) to serve traffic.
+
+See http://releases.k8s.io/release-1.2/docs/user-guide/services-firewalls.md for more details.
+
 ```
+You can now access the dashboard from your whitelisted IP at http://<controller public ip>:<service port>
+The service port is supplied when you create the dashboard. In the example here, it was 32584.
 
 
 ### Destroy the cluster
@@ -183,5 +188,5 @@ Do you really want to destroy?
 openstack_compute_secgroup_v2.kubernetes_controller: Destruction complete
 openstack_compute_secgroup_v2.kubernetes_internal: Destruction complete
 
-Apply complete! Resources: 0 added, 0 changed, 12 destroyed.      
+Apply complete! Resources: 0 added, 0 changed, 16 destroyed.    
 ```
