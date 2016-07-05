@@ -12,14 +12,14 @@ resource "null_resource" "generate_ssl" {
 }
 
 resource "template_file" "discovery_url" {
-    template = "templates/discovery_url"
+    template = "${file("templates/discovery_url")}"
     depends_on = [
         "null_resource.discovery_url_template"
     ]
 }
 
 resource "template_file" "controller_cloud_init" {
-    template = "templates/cloud-init"
+    template = "${file("templates/cloud-init")}"
     vars {
         flannel_network = "${var.flannel_network}"
         flannel_backend = "${var.flannel_backend}"
@@ -30,8 +30,8 @@ resource "template_file" "controller_cloud_init" {
 }
 
 resource "template_file" "compute_cloud_init" {
-    template = "templates/cloud-init"
-    vars {
+    template = "${file("templates/cloud-init")}"
+        vars {
         flannel_network = "${var.flannel_network}"
         flannel_backend = "${var.flannel_backend}"
         etcd_servers = "${join(",", "${formatlist("http://%s:2379", openstack_compute_instance_v2.controller.*.network.0.fixed_ip_v4)}")}"
@@ -99,7 +99,7 @@ resource "openstack_compute_instance_v2" "controller" {
             "sudo mv ca.pem /etc/kubernetes/ssl",
             "sudo chown root:core /etc/kubernetes/ssl/*; sudo chmod 0640 /etc/kubernetes/ssl/*-key.pem",
             "sed -i 's/MY_IP/${self.network.0.fixed_ip_v4}/' /tmp/stage/*/*",
-            "sed -i 's/ADVERTISE_IP/${element(openstack_networking_floatingip_v2.controller.*.address, count.index)}/' /tmp/stage/*/*",
+            "sed -i 's/ADVERTISE_IP/${self.network.0.fixed_ip_v4}/' /tmp/stage/*/*",
             "sed -i 's|PORTAL_NET|${var.portal_net}|' /tmp/stage/*/*",
             "sed -i 's|CLUSTER_DNS|${cidrhost(var.portal_net, 200)}|' /tmp/stage/*/*",
             "sed -i 's|HYPERKUBE_VERSION|${var.hyperkube_version}|' /tmp/stage/*/*",
@@ -169,6 +169,7 @@ resource "openstack_compute_instance_v2" "compute" {
             "sed -i 's/CONTROLLER_HOST/${openstack_compute_instance_v2.controller.0.network.0.fixed_ip_v4}/' /tmp/stage/*/*",
             "sed -i 's|PORTAL_NET|${var.portal_net}|' /tmp/stage/*/*",
             "sed -i 's|CLUSTER_DNS|${cidrhost(var.portal_net, 200)}|' /tmp/stage/*/*",
+            "sed -i 's|HYPERKUBE_VERSION|${var.hyperkube_version}|' /tmp/stage/*/*",
             "sudo mkdir -p /etc/kubernetes/manifests",
             "sudo mv /tmp/stage/compute/*.yaml /etc/kubernetes/manifests/",
             "sudo mv /tmp/stage/compute/*.service /etc/systemd/system/",
@@ -200,6 +201,8 @@ resource "null_resource" "controller" {
             "  --client-certificate=/etc/kubernetes/ssl/admin.pem",
             "/opt/bin/kubectl config set-context ${var.kubernetes_user} --cluster=${var.cluster_name} --user=${var.kubernetes_user}",
             "/opt/bin/kubectl config set-context kubernetes --cluster=${var.cluster_name} --user=${var.kubernetes_user}",
+            "/opt/bin/kubectl config set current-context kubernetes",
+            "/opt/bin/kubectl create namespace kube-system",
         ]
         connection {
             user = "core"
