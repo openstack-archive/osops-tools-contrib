@@ -17,7 +17,8 @@ spec:
     - --service-cluster-ip-range=PORTAL_NET
     - --secure-port=443
     - --advertise-address=ADVERTISE_IP
-    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota    - --tls-cert-file=/etc/kubernetes/ssl/controller.pem
+    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
+    - --tls-cert-file=/etc/kubernetes/ssl/controller.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/controller-key.pem
     - --client-ca-file=/etc/kubernetes/ssl/ca.pem
     - --service-account-key-file=/etc/kubernetes/ssl/admin-key.pem
