@@ -4,7 +4,8 @@ Requires=flanneld.service
 After=flanneld.service
 
 [Service]
-ExecStart=/usr/bin/kubelet \
+Environment=KUBELET_VERSION=HYPERKUBE_VERSION
+ExecStart=/usr/lib/coreos/kubelet-wrapper \
   --api_servers=https://CONTROLLER_HOST \
   --register-node=true \
   --allow-privileged=true \
