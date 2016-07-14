@@ -1,0 +1,9 @@
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Code-Review+1: Paul Czarkowski <paul.czarkowski@rackspace.com>
+Workflow+1: JJ Asghar <jj@chef.io>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 14 Jul 2016 19:24:45 +0000
+Reviewed-on: https://review.openstack.org/337825
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
