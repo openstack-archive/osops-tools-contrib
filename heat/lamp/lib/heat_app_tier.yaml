@@ -1,0 +1,138 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This is a nested Heat used by the 3-Tier Architecture Workload reference document
+  created by the Enterprise Working Group.  These templates demonstrate a sample
+  LAMP architecture supporting Wordpress. This template file launches the application
+  tier nodes, and installs Apache, PHP, MySQL client, and finally WordPress.
+  This serves as a guide to new users and is not meant for production deployment.
+
+  #Created by: Craig Sterrett 3/23/2016
+
+parameters:
+  ssh_key_name:
+    type: string
+    label: SSH Key Name
+    description: REQUIRED PARAMETER -Name of an existing SSH KeyPair to enable SSH access to instances.
+    hidden: false
+    default: cloudkey
+
+  server_name:
+    type: string
+    label: Server Name
+    description: REQUIRED PARAMETER - Name of the instance to spin up.
+    hidden: false
+    default: App_Server
+
+  instance_flavor:
+    type: string
+    label: Instance Flavor
+    description: The flavor type to use for each server.
+    default: m1.small
+    hidden: false
+
+  image_id:
+    type: string
+    label: Image ID
+    description: >
+      REQUIRED PARAMETER - The image id to be used for the compute instance. Please specify
+      your own Image ID in your project/tenant.
+    hidden: false
+
+  private_network_id:
+    type: string
+    default: App_Tier_private_network
+    description: The private Application network that will be utilized for all App servers
+
+  security_group:
+    type: string
+    default: Workload_App_SG
+    description: The Application security group that will be utilized for all App servers
+
+  pool_name:
+    type: string
+    description: LBaaS Pool to join
+
+  db_server_ip:
+    type: string
+    description: Database Server IP
+
+  metadata:
+    type: json
+
+resources:
+  app_server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: server_name }
+      image: { get_param: image_id }
+      flavor: { get_param: instance_flavor }
+      key_name: { get_param: ssh_key_name }
+      metadata: { get_param: metadata }
+      networks:
+        - network: { get_param: private_network_id }
+      security_groups:
+        - { get_param: security_group }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            $db_server_ip: { get_param: db_server_ip }
+          template: |
+            #!/bin/bash -v
+            #use apt-get for Debian/ubuntu, and yum for centos/fedora
+            if apt-get -v &> /dev/null
+            then
+             apt-get update -y
+             apt-get upgrade -y
+             #Install PHP5, and mysql
+             apt-get -y install apache2 php5 libapache2-mod-php5 php5-mysql php5-gd mysql-client
+            elif which yum &> /dev/null
+            then
+             yum update -y
+             #Install PHP5, and mysql
+             setenforce 0
+             yum install -y php php-mysql
+             yum install -y wget
+             yum install php-gd
+            fi
+
+            # install wordpress 
+            # download wordpress
+            wget http://wordpress.org/latest.tar.gz
+            tar -xzf latest.tar.gz
+
+            # configure wordpress
+            cp wordpress/wp-config-sample.php wordpress/wp-config.php
+            sed -i 's/database_name_here/wordpress/' wordpress/wp-config.php
+            sed -i 's/username_here/wordpress_user/' wordpress/wp-config.php
+            sed -i 's/password_here/wordpress/' wordpress/wp-config.php
+            sed -i 's/localhost/$db_server_ip/' wordpress/wp-config.php
+
+            # install a copy of the configured wordpress into apache's www directory
+            rm /var/www/html/index.html
+            cp -R wordpress/* /var/www/html/
+
+            # give apache ownership of the application files
+            chown -R www-data:www-data /var/www/html/
+            chown -R apache:apache /var/www/html/
+            chmod -R g+w /var/www/html/
+            #Allow remote database connection
+            setsebool -P httpd_can_network_connect=1
+            systemctl restart httpd.service
+
+  Pool_Member:
+      type: OS::Neutron::PoolMember
+      properties:
+        pool_id: {get_param: pool_name}
+        address: {get_attr: [app_server, first_address]}
+        protocol_port: 80
+
+outputs:
+  app_private_ip:
+    description: Private IP address of the Web node
+    value: { get_attr: [app_server, first_address] }
+  lb_member:
+    description: LoadBalancer member details.
+    value: { get_attr: [Pool_Member, show] }
+
