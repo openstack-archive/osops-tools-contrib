@@ -1,0 +1,211 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This is a nested Heat used by the 3-Tier Architecture Workload reference document
+  created by the Enterprise Working Group.  These templates demonstrate a sample
+  LAMP architecture supporting Wordpress. This template file launches the database
+  tier node, creates a cinder block device to store the database files and creates
+  the required users and databases for the WordPress application.
+  This serves as a guide to new users and is not meant for production deployment.
+
+  #Created by: Craig Sterrett 3/23/2016
+
+
+parameters:
+  ssh_key_name:
+    type: string
+    label: SSH Key Name
+    description: REQUIRED PARAMETER -Name of an existing SSH KeyPair to enable SSH access to instances.
+    hidden: false
+    default: cloudkey
+
+  server_name:
+    type: string
+    label: Server Name
+    description: REQUIRED PARAMETER - Name of the instance to spin up.
+    hidden: false
+    default: DB_Server
+
+  instance_flavor:
+    type: string
+    label: Instance Flavor
+    description: The flavor type to use for each server.
+    default: m1.small
+    hidden: false
+
+  image_id:
+    type: string
+    label: Image ID
+    description: >
+      REQUIRED PARAMETER - The image id to be used for the compute instance. Please specify
+      your own Image ID in your project/tenant.
+    hidden: false
+
+  private_network_id:
+    type: string
+    default: DB_Tier_private_network
+    description: The private database network that will be utilized for all DB servers
+
+  security_group:
+    type: string
+    default: Workload_DB_SG
+    description: The database security group that will be utilized for all DB servers
+    
+  db_name:
+    type: string
+    description: MYSQL database name
+    default: wordpress
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_name must begin with a letter and contain only alphanumeric
+          characters
+
+  db_username:
+    type: string
+    description: MYSQL database admin account username
+    default: wordpress_user 
+    hidden: true
+
+  db_password:
+    type: string
+    description: MYSQL database admin account password
+    default: wordpress
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 41 }
+        description: db_password must be between 1 and 41 characters
+      - allowed_pattern: '[a-zA-Z0-9]*'
+        description: db_password must contain only alphanumeric characters
+
+  db_root_password:
+    type: string
+    description: Root password for MySQL
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 41 }
+        description: db_root_password must be between 1 and 41 characters
+      - allowed_pattern: '[a-zA-Z0-9]*'
+        description: db_root_password must contain only alphanumeric characters
+
+  db_volume_size:
+    type: string
+    description: Database cinder volume size (in GB) for database files 
+    default: 2
+    hidden: true
+
+resources:
+  #Setup a cinder volume for storage of the datbase files
+  db_files_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: db_volume_size }
+      name: DB_Files
+
+  db_volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: db_files_volume }
+      instance_uuid: { get_resource: MYSQL_instance }
+
+  #Install MySQL and setup sample DB and set usernames and passwords
+  MYSQL_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: server_name }
+      image: { get_param: image_id }
+      flavor: { get_param: instance_flavor }
+      key_name: { get_param: ssh_key_name }
+      networks:
+        - network: { get_param: private_network_id }
+      security_groups:
+        - { get_param: security_group }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+            #make mount point for cinder volume and prepare volume
+            mkdir /mnt/db_files
+            chown mysql:mysql /mnt/db_files
+            volume_path="/dev/disk/by-id/virtio-$(echo volume_id | cut -c -20)"
+            echo  ${volume_path}
+            mkfs.ext4 ${volume_path}
+            echo "${volume_path} /mnt/db_files ext4 defaults 1 2" >> /etc/fstab
+            mount /mnt/db_files
+            #use apt-get for Debian/ubuntu, and yum for centos/fedora
+            if apt-get -v &> /dev/null
+            then
+             apt-get update -y
+             apt-get upgrade -y
+             #Next line stops mysql install from popping up request for root password
+             export DEBIAN_FRONTEND=noninteractive
+             apt-get install -q -y --force-yes mariadb-server
+             touch /var/log/mariadb/mariadb.log
+             chown mysql:mysql /var/log/mariadb/mariadb.log
+             #Ubuntu mysql install blocks remote access by default
+             sed -i 's/bind-address/#bind-address/' /etc/mysql/my.cnf
+             service mysql stop
+             #Move the database to the cinder device
+             mv -f /var/lib/mysql /mnt/db_files/
+             #edit data file location in the mysql config file
+             sed -i 's/\/var\/lib\/mysql/\/mnt\/db_files\/mysql/' /etc/mysql/my.cnf
+             service mysql start
+            elif which yum &> /dev/null
+            then            
+             yum update -y
+             yum -y install mariadb-server mariadb
+             systemctl start mariadb
+             systemctl stop mariadb
+             chown mysql:mysql /mnt/db_files
+             touch /var/log/mariadb/mariadb.log
+             chown mysql:mysql /var/log/mariadb/mariadb.log
+             #Move the database to the cinder device
+             mv -f /var/lib/mysql /mnt/db_files/
+             #edit data file location in the mysql config file
+             sed -i 's/\/var\/lib\/mysql/\/mnt\/db_files\/mysql/' /etc/my.cnf
+             #need to modify the socket info for the clients
+             echo "[client]" >> /etc/my.cnf
+             echo "socket=/mnt/db_files/mysql/mysql.sock" >> /etc/my.cnf
+             systemctl start mariadb
+             systemctl enable mariadb
+            fi
+
+            # Setup MySQL root password and create a user and add remote privs to app subnet
+            mysqladmin -u root password db_rootpassword
+            # create wordpress database
+            cat << EOF | mysql -u root --password=db_rootpassword
+            CREATE DATABASE db_name;
+            CREATE USER 'db_user'@'localhost';
+            SET PASSWORD FOR 'db_user'@'localhost'=PASSWORD("db_password");
+            GRANT ALL PRIVILEGES ON db_name.* TO 'db_user'@'localhost' IDENTIFIED BY 'db_password';
+            CREATE USER 'db_user'@'%';
+            SET PASSWORD FOR 'db_user'@'%'=PASSWORD("db_password");
+            GRANT ALL PRIVILEGES ON db_name.* TO 'db_user'@'%' IDENTIFIED BY 'db_password';
+            FLUSH PRIVILEGES;
+            EOF
+
+          params:
+            db_rootpassword: { get_param: db_root_password }
+            db_name: { get_param: db_name }
+            db_user: { get_param: db_username }
+            db_password: { get_param: db_password }
+            volume_id: {get_resource: db_files_volume }
+outputs:
+  completion:
+    description: >
+      MYSQL Setup is complete, login username and password are
+    value:
+      str_replace:
+        template: >
+         Database Name=$dbName, Database Admin Acct=$dbAdmin
+        params:
+         $dbName: { get_param: db_name }
+         $dbAdmin: { get_param: db_username }
+  db_server_ip:
+    description: DB server IP returned to use in config files by calling template
+    value: {get_attr: [ MYSQL_instance, first_address]}
+
