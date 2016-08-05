@@ -1,0 +1,355 @@
+heat_template_version: 2016-04-08
+
+description: >
+  This is the one of the nested Heat templates for the 3-tier LAMP Workload created by the
+  Enterprise WG.  This Heat template is called by the AppWG_3Tier.yaml file.
+  This template needs to be called first to setup the networks and security groups used by
+  the instances.
+
+  REQUIRED YAML FILES:
+  none
+
+  REQUIRED PARAMETERS:
+  public_network_id
+
+  #Created by: Craig Sterrett 3/23/2016
+
+parameters:
+  public_network_id:
+    type: string
+    label: Public Network
+    description: >
+      REQUIRED PARAMETER - The public network name or id used to access the internet.
+      This will fail if this is not a true public network
+
+  dns_nameserver:
+    type: comma_delimited_list
+    label: DNS Name Server
+    description: The IP address of a DNS nameserver
+    default: 8.8.8.8,8.8.4.4
+
+resources:
+
+###########
+#Create 3 private Networks, one for each Tier
+
+# create a private network/subnet for the web servers
+  web_private_network:
+    type: OS::Neutron::Net
+    properties:
+      name: Web_Tier_private_network
+
+  web_private_network_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      cidr: 192.168.100.0/24
+      #Need to define default gateway in order for LBaaS namespace to pick it up
+      #If you let neutron grant a default gateway IP, then the LBaaS namespace may
+      #not pick it up and you will have routing issues
+      gateway_ip: 192.168.100.4
+      allocation_pools: [{ "start": 192.168.100.10, "end": 192.168.100.200 }]
+      #This routing information will get passed to the instances as they startup
+      #Provide the routes to the App network otherwise everything will try to go out the 
+      #default gateway
+      host_routes: [{"destination": 192.168.101.0/24, "nexthop": 192.168.100.5}]
+      network: { get_resource: web_private_network }
+      name: Web_Tier_private_subnet
+      dns_nameservers: { get_param: dns_nameserver }
+      enable_dhcp: true
+
+# create a router between the public/external network and the web network
+  public_router:
+    type: OS::Neutron::Router
+    properties:
+      name: PublicWebRouter
+      external_gateway_info:
+        network: { get_param: public_network_id }
+
+# attach the web private network to the public router
+  public_router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: public_router }
+      subnet: { get_resource: web_private_network_subnet }
+
+#############################
+# create a private network/subnet for the Application servers
+  App_private_network:
+    type: OS::Neutron::Net
+    properties:
+      name: App_Tier_private_network
+
+  App_private_network_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      cidr: 192.168.101.0/24
+      #Need to define default gateway in order for LBaaS namespace to pick it up
+      #If you let neutron grant a default gateway IP, then the LBaaS namespace may
+      #not pick it up and you will have routing issues
+      gateway_ip: 192.168.101.5
+      #setting aside lower IP's to leave room for routers
+      allocation_pools: [{ "start": 192.168.101.10, "end": 192.168.101.200 }]
+      #This routing information will get passed to the instances as they startup
+      #Provide both the routes to the DB nework and to the web network
+      host_routes: [{"destination": 192.168.100.0/24, "nexthop": 192.168.101.5}, {"destination": 192.168.102.0/24, "nexthop": 192.168.101.6}, {"destination": 0.0.0.0/24, "nexthop": 192.168.100.4}]
+      network: { get_resource: App_private_network }
+      name: App_Tier_private_subnet
+      dns_nameservers: { get_param: dns_nameserver }
+      enable_dhcp: true
+
+# create a router linking App and Web network
+  App_router:
+    type: OS::Neutron::Router
+    properties:
+      name: "AppWebRouter"
+      external_gateway_info: {"network":  { get_param: public_network_id }, "enable_snat": True}
+
+# Create a port connecting the App_router to the App network
+  web_router_app_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "App_Net_Port"
+      network: { get_resource: App_private_network }
+      #Assign the default gateway address
+      #The default gateway will get set as the default route in the LBaaS namespace
+      fixed_ips: [{"ip_address": 192.168.101.5}]
+
+# Create a port connecting the App_router to the Web network
+  web_router_web_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "Web_Net_Port"
+      network: { get_resource: web_private_network }
+      fixed_ips: [{"ip_address": 192.168.100.5}]
+
+  App_router_interface1:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: App_router }
+      port: { get_resource: web_router_app_port }
+
+  App_router_interface2:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: App_router }
+      port: { get_resource: web_router_web_port }
+
+##############################
+#Create two Load Balancers one for the Web tier with a public IP and one for the App Tier
+#with only private network access
+#LBaaS V1 Load Balancer for Web Tier
+  Web_Tier_LoadBalancer:
+    type: OS::Neutron::LoadBalancer
+    properties:
+      protocol_port: 80
+      pool_id: {get_resource: Web_Server_Pool}
+
+#LBaaS V1 Monitor for Web Tier
+  Web_Tier_Monitor:
+    type: OS::Neutron::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 5
+      timeout: 5
+
+#LBaaS V1 Pool for Web Tier
+  Web_Server_Pool:
+    type: OS::Neutron::Pool
+    properties:
+      protocol: HTTP
+      monitors: [{get_resource: Web_Tier_Monitor}]
+      subnet: {get_resource: web_private_network_subnet}
+      lb_method: ROUND_ROBIN
+      vip:
+        protocol_port: 80
+
+# Create a VIP port
+  web_vip_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: web_private_network }
+      security_groups: [{ get_resource: web_security_group }]
+      fixed_ips:
+        - subnet_id:  { get_resource: web_private_network_subnet } 
+
+#  Floating_IP:
+  Web_Network_Floating_IP:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: public_network_id}
+      port_id: { get_resource: web_vip_port }      
+      
+#  Associate the Floating IP:
+  association:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: Web_Network_Floating_IP }      
+      port_id: { get_attr: [ Web_Server_Pool, vip, port_id ] }
+
+#****************************************
+#App Load Balancer
+#LBaaS V1 Load Balancer for App Tier
+  App_Tier_LoadBalancer:
+    type: OS::Neutron::LoadBalancer
+    properties:
+      protocol_port: 80
+      pool_id: {get_resource: App_Server_Pool}
+
+#LBaaS V1 Monitor for App Tier
+  App_Tier_Monitor:
+    type: OS::Neutron::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 5
+      timeout: 5
+
+#LBaaS V1 Pool for App Tier
+  App_Server_Pool:
+    type: OS::Neutron::Pool
+    properties:
+      protocol: HTTP
+      monitors: [{get_resource: App_Tier_Monitor}]
+      subnet_id: {get_resource: App_private_network_subnet}
+      lb_method: ROUND_ROBIN
+      vip:
+        protocol_port: 80
+
+#############################
+# create a private network/subnet for the Database servers
+  DB_private_network:
+    type: OS::Neutron::Net
+    properties:
+      name: DB_Tier_private_network
+
+  DB_private_network_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      cidr: 192.168.102.0/24
+      gateway_ip: 192.168.102.6
+      allocation_pools: [{ "start": 192.168.102.10, "end": 192.168.102.200 }]
+      host_routes: [{"destination": 192.168.101.0/24, "nexthop": 192.168.102.6}]
+      network: { get_resource: DB_private_network }
+      dns_nameservers: { get_param: dns_nameserver }
+      enable_dhcp: true
+
+# create a router linking Database and App network
+  DB_router:
+    type: OS::Neutron::Router
+    properties:
+      name: "AppDBRouter"
+      external_gateway_info: {"network":  { get_param: public_network_id }, "enable_snat": True}
+
+# Create a port connecting the db_router to the db network
+  db_router_db_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: DB_private_network }
+      name: "DB_Net_Port"
+      fixed_ips: [{"ip_address": 192.168.102.6}]
+
+
+# Create a port connecting the db_router to the app network
+  db_router_app_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: App_private_network }
+      name: "DB_Router_App_Port"
+      fixed_ips: [{"ip_address": 192.168.101.6}]
+
+# Now lets add our ports to our router
+  db_router_interface1:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: DB_router }
+      port: { get_resource: db_router_db_port }
+
+  db_router_interface2:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: DB_router }
+      port: { get_resource: db_router_app_port }
+
+#################
+#Create separate security groups for each Tier
+
+# create a specific web security group that routes just web and ssh traffic
+  web_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: A application specific security group that passes ports 22 and 80
+      name: Workload_Web_SG
+      rules:
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+
+
+# create a specific application layer security group that routes database port 3306 traffic and ssh
+  app_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: A application specific security group that passes ports 22, 80 and 3306
+      name: Workload_App_SG
+      rules:
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+        - protocol: tcp
+          port_range_min: 3306
+          port_range_max: 3306
+
+# create a specific database security group that routes just database port 3306 traffic and ssh
+  db_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: A database specific security group that just passes port 3306 and 22 for ssh
+      name: Workload_DB_SG
+      rules:
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 3306
+          port_range_max: 3306
+
+
+outputs:
+#Return a bunch of values so we can use them later in the Parent Heat template when we spin up servers
+  db_private_network_id:
+    description: Database private network ID
+    value: {get_resource: DB_private_network}
+  web_private_network_id:
+    description: Web private network ID
+    value: {get_resource: web_private_network}
+  app_private_network_id:
+    description: App private network ID
+    value: {get_resource: App_private_network}
+  db_security_group_id:
+    description: Database security group ID
+    value: {get_resource: db_security_group}
+  app_security_group_id:
+    description: App security group ID
+    value: {get_resource: app_security_group}
+  web_security_group_id:
+    description: Web security group ID
+    value: {get_resource: web_security_group}
+  web_lbaas_pool_name:
+    description: Name of Web LBaaS Pool
+    value: {get_resource: Web_Server_Pool}
+  app_lbaas_pool_name:
+    description: Name of App LBaaS Pool
+    value: {get_resource: App_Server_Pool}
+  web_lbaas_IP:
+    description: Public floating IP assigned to web LBaaS
+    value: { get_attr: [ Web_Network_Floating_IP, floating_ip_address ] }
+  app_lbaas_IP:
+    description: Internal floating IP assigned to app LBaaS
+    value: {get_attr: [ App_Server_Pool, vip, address]}
