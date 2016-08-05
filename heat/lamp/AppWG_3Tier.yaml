@@ -1,0 +1,216 @@
+heat_template_version: 2016-04-08
+#The value of heat_template_version tells Heat not only the format of the template but also features that will be validated and supported
+#2016-04-08 represents the Mitaka release
+
+description: >
+  This is the main Heat template for the 3-tier LAMP Workload created by the Enterprise WG.
+  This version of the tempalte does not include autoscaling, and does not require ceilometer.
+  This template calls multiple nested templates which actually do the
+  majority of the work.  This file calls the following yaml files in a ./lib subdirectory
+    setup_net_sg.yaml sets up the security groups and networks for Web, App, and Database
+    heat_app_tier.yaml starts up application servers and does on-the-fly builds
+    heat_web_tier.yaml starts up web servers and does on-the-fly builds
+    heat_sql_tier.yaml starts up mysql server and does on-the-fly builds.
+
+  NOTE: This serves as a guide to new users and is not meant for production deployment.
+
+  REQUIRED YAML FILES:
+  setup_net_sg.yaml, heat_app_tier.yaml, heat_sql_tier.yaml, heat_web_tier.yaml
+
+  REQUIRED PARAMETERS:
+  ssh_key_name, image_id, public_network_id
+  
+  OPTIONAL PARAMETERS:
+  db_instance_flavor, app_instance_flavor, web_instance_flavor, db_server_name, app_server_name, web_server_name, dns_nameserver
+
+  #Created by: Craig Sterrett 3/23/2016
+
+
+######################################
+#The parameters section allows for specifying input parameters that have to be provided when instantiating the template
+parameters:
+  ssh_key_name:
+    type: string
+    label: SSH Key Name
+    description: REQUIRED PARAMETER -Name of an existing SSH KeyPair to enable SSH access to instances.
+    hidden: false
+    constraints:
+      - custom_constraint: nova.keypair
+        description: Must already exist on your cloud
+
+  image_id:
+    type: string
+    label: Image ID
+    description: >
+      REQUIRED PARAMETER - The image id to be used for the compute instance. Please specify
+      your own Image ID in your project/tenant.  This could be modified to use different
+      images for each tier.
+    hidden: false
+    constraints:
+      - custom_constraint: glance.image
+        description: Must be a valid image on your cloud
+
+  public_network_id:
+    type: string
+    label: Public Network
+    description: >
+      REQUIRED PARAMETER - The public network name or id used to access the internet.
+      This will fail if this is not a true public network
+    hidden: false
+    constraints:
+      - custom_constraint: neutron.network
+        description: Must be a valid network on your cloud
+
+  db_instance_flavor:
+    type: string
+    label: Database server instance flavor
+    description: The flavor type to use for db server.
+    default: m1.small
+    hidden: false
+    constraints:
+      - custom_constraint: nova.flavor
+        description:  Must be a valid flavor provided by your cloud provider.
+
+  app_instance_flavor:
+    type: string
+    label: Application server instance flavor
+    description: The flavor type to use for app servers.
+    default: m1.small
+    hidden: false
+    constraints:
+      - custom_constraint: nova.flavor
+        description:  Must be a valid flavor provided by your cloud provider.
+
+  web_instance_flavor:
+    type: string
+    label: Web server instance flavor
+    description: The flavor type to use for web servers.
+    default: m1.small
+    hidden: false
+    constraints:
+      - custom_constraint: nova.flavor
+        description:  Must be a valid flavor provided by your cloud provider.
+
+  db_server_name:
+    type: string
+    label: Server Name
+    description: Name of the database servers
+    hidden: false
+    default: db_server
+
+  app_server_name:
+    type: string
+    label: Server Name
+    description: Name of the application servers
+    hidden: false
+    default: app_server
+
+  web_server_name:
+    type: string
+    label: Server Name
+    description: Name of the web servers
+    hidden: false
+    default: web_server
+
+  dns_nameserver:
+    type: comma_delimited_list
+    label: DNS Name Server
+    description: The IP address of a DNS nameserver in list format
+    default: 8.8.8.8,8.8.4.4
+    
+######################################
+#The resources section defines actual resources that make up a stack deployed from the HOT template (for instance compute instances, networks, storage volumes).
+resources:
+
+####################
+#Setup Networking and Security Group
+#Call the setup_net_sg.yaml file
+
+  network_setup:
+    type: lib/setup_net_sg.yaml
+    properties:
+      public_network_id: { get_param: public_network_id }
+      dns_nameserver: { get_param: dns_nameserver }
+
+
+####################
+##Kick off a Database server
+
+  launch_db_server:
+    type: lib/heat_sql_tier.yaml
+    properties:
+      ssh_key_name: { get_param: ssh_key_name }
+      server_name: { get_param: db_server_name }
+      instance_flavor: { get_param: db_instance_flavor }
+      image_id: { get_param: image_id }
+      private_network_id: {get_attr: [network_setup, db_private_network_id]}
+      security_group: {get_attr: [network_setup, db_security_group_id]}
+
+####################
+##Kick off two application servers
+#Utilizing Heat resourcegroup to kick off multiple copies
+
+  app_server_resource_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 2
+      resource_def: 
+       type: lib/heat_app_tier.yaml
+       properties:
+         ssh_key_name:
+           get_param: ssh_key_name
+         server_name:
+           get_param: app_server_name
+         instance_flavor:
+           get_param: app_instance_flavor
+         image_id:
+           get_param: image_id
+         db_server_ip: {get_attr: [launch_db_server, db_server_ip]}
+         private_network_id: {get_attr: [network_setup, app_private_network_id]}
+         security_group: {get_attr: [network_setup, app_security_group_id]}
+         pool_name: {get_attr: [network_setup, app_lbaas_pool_name]}
+         #Just passing something for metadata, it's not used in this script but is used in
+         #the autoscaling script
+         metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+                         
+####################
+##Kick off two web servers
+#Utilizing Heat resourcegroup to kick off multiple copies
+
+  web_server_resource_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 2
+      resource_def: 
+       type: lib/heat_web_tier.yaml
+       properties:
+         ssh_key_name:
+           get_param: ssh_key_name
+         server_name:
+           get_param: web_server_name
+         instance_flavor:
+           get_param: web_instance_flavor
+         image_id:
+           get_param: image_id
+         private_network_id: {get_attr: [network_setup, web_private_network_id]}
+         app_lbaas_vip: {get_attr: [network_setup, app_lbaas_IP]}
+         security_group: {get_attr: [network_setup, web_security_group_id]}
+         pool_name: {get_attr: [network_setup, web_lbaas_pool_name]}
+         #Just passing something for metadata, it's not used in this script but is used in
+         #the autoscaling script
+         metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+         
+######################################
+#The outputs section defines output parameters that should be available to the user after a stack has been created.
+outputs:
+
+ web_lbaas_ip:
+    description: >
+      This is the floating IP assigned to the WEB LoadBalancer.
+    value: {get_attr: [network_setup, web_lbaas_IP]}
+
+ app_lbaas_ip:
+    description: >
+      This is the floating IP assigned to the Application LoadBalancer.
+    value: {get_attr: [network_setup, app_lbaas_IP]}
+
