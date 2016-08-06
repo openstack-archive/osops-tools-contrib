@@ -1,0 +1,9 @@
+/onvm/conf/nodes.conf.yml
+/onvm/conf/ids.conf.yml
+/onvm/conf/hosts
+/onvm/lampstack/openrc
+*.out
+*/**/*.log
+*/**/.DS_Store
+*/**/._
+*/**/*.tfstate*
