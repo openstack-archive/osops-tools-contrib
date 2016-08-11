@@ -1,0 +1,51 @@
+---
+- os_keypair:
+    state: "absent"
+    auth: "{{ auth }}"
+    name: "lampstack"
+    public_key_file: "{{ app_env.public_key_file }}"
+
+- os_server:
+    state: "absent"
+    auth: "{{ auth }}"
+    name: database
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    network: "{{ app_env.private_net_name }}"
+    auto_ip: yes
+    meta:
+      hostname: database
+
+- os_server:
+    state: "absent"
+    auth: "{{ auth }}"
+    name: apache_{{ item }}
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    network: "{{ app_env.private_net_name }}"
+    auto_ip: yes
+    meta:
+      hostname: apache_{{ item }}
+  with_sequence: count={{ app_env.stack_size - 1 }}
+
+- os_security_group:
+    state: absent
+    auth: "{{ auth }}"
+    name: lampstack_sg
+    description: secuirty group for lampstack
+
+- os_server_volume:
+    state: absent
+    auth: "{{ auth }}"
+    server: database
+    volume: db_volume
+    device: /dev/vdb
+  when: database is defined
+
+- os_volume:
+    state: absent
+    auth: "{{ auth }}"
+    wait: yes
+    display_name: db_volume
