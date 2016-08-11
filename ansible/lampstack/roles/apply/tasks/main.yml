@@ -1,0 +1,95 @@
+---
+- name: Retrieve specified flavor
+  os_flavor_facts:
+    auth: "{{ auth }}"
+    name: "{{ app_env.flavor_name }}"
+
+- name: Create a key-pair
+  os_keypair:
+    state: "present"
+    auth: "{{ auth }}"
+    name: "lampstack"
+    public_key_file: "{{ app_env.public_key_file }}"
+
+- name: Create volume
+  os_volume:
+    state: present
+    auth: "{{ auth }}"
+    size: "{{ app_env.volume_size }}"
+    wait: yes
+    display_name: db_volume
+
+- name: Create security group
+  os_security_group:
+    state: present
+    auth: "{{ auth }}"
+    name: lampstack_sg
+    description: secuirty group for lampstack
+
+- name: Add security rules
+  os_security_group_rule:
+    state: present
+    auth: "{{ auth }}"
+    security_group: lampstack_sg
+    protocol: tcp
+    port_range_min: "{{ item.p_min }}"
+    port_range_max: "{{ item.p_max }}"
+    remote_ip_prefix: 0.0.0.0/0
+  with_items:
+    - { p_min: 22, p_max: 22 }
+    - { p_min: 80, p_max: 80 }
+    - { p_min: 3306, p_max: 3306 }
+
+- name: Create database node
+  os_server:
+    state: "present"
+    auth: "{{ auth }}"
+    name: database
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    flavor: "{{ openstack_flavors[0].id }}"
+    network: "{{ app_env.private_net_name }}"
+    auto_ip: yes
+    userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    security_groups: lampstack_sg
+    meta:
+      hostname: database
+  register: database
+
+- name: Add database node to the dbservers host group
+  add_host:
+    name: "{{ database.openstack.public_v4 }}"
+    groupname: dbservers
+
+- name: Create a volume for database to save data
+  os_server_volume:
+    state: present
+    auth: "{{ auth }}"
+    server: database
+    volume: db_volume
+    device: /dev/vdb
+
+- name: Create web server nodes to host application
+  os_server:
+    state: "present"
+    auth: "{{ auth }}"
+    name: apache-{{ item }}
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    flavor: "{{ openstack_flavors[0].id }}"
+    network: "{{ app_env.private_net_name }}"
+    auto_ip: yes
+    userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    security_groups: lampstack_sg
+    meta:
+      hostname: apache-{{ item }}
+  with_sequence: count={{ app_env.stack_size - 1 }}
+  register: webserver
+
+- name: Add web servers to webservers host group
+  add_host:
+    name: "{{ item.openstack.public_v4 }}"
+    groupname: webservers
+  with_items: "{{ webserver.results }}"

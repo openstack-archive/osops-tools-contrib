@@ -1,0 +1,51 @@
+---
+- name: Apache and php 5
+  apt:
+    name="{{ item }}" 
+    state=latest 
+    update_cache=yes
+  with_items:
+    - apache2
+    - php5
+    - php5-mysql
+
+- lineinfile: dest=/etc/apache2/apache2.conf line="ServerName localhost"
+
+- shell: rm -rf /var/www/html/*
+  args:
+    warn: no
+
+- name: Download wordpress
+  get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /var/www/latest.tar.gz
+
+- name: Unpack latest wordpress
+  shell: tar -xf /var/www/latest.tar.gz -C /var/www/html --strip-components=1
+  args:
+    warn: no
+
+- name: Create wordpress configuration
+  shell: cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+  args:
+    warn: no
+
+- name: Configure wordpress
+  replace:
+    dest: /var/www/html/wp-config.php
+    regexp: "'{{ item.then }}'"
+    replace: "'{{ item.now }}'"
+    backup: no
+  with_items:
+    - { then: 'database_name_here', now: 'decision2016' }
+    - { then: 'username_here', now: 'dbuser'}
+    - { then: 'password_here', now: "{{ db_pass }}" }
+    - { then: 'localhost',
+        now: "{{ hostvars.cloud.database.openstack.private_v4 }}"}
+
+- name: Change ownership of wordpress
+  shell: chown -R www-data:www-data /var/www/html
+  args:
+    warn: no
+  notify:
+  - restart apache2

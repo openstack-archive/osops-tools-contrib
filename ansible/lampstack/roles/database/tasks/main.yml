@@ -1,0 +1,46 @@
+---
+# We create partition on the cinder volume and mount
+# The ignore_errors is to make sure that we can run playbook repeatly
+- shell: parted -s /dev/vdb mklabel msdos
+  ignore_errors: yes
+  no_log: true
+
+- shell: parted -s /dev/vdb mkpart primary ext4 1049kb 100%
+  ignore_errors: yes
+  no_log: true
+
+- file: path=/var/lib/mysql state=directory mode=0755
+- filesystem: fstype=ext4 dev=/dev/vdb1
+- mount: name=/var/lib/mysql src=/dev/vdb1 fstype=ext4 state=mounted
+
+- name: Install mysql and libraries
+  apt: 
+    name="{{ item }}" 
+    state=latest 
+    update_cache=yes
+  with_items:
+    - mysql-server
+    - python-mysqldb
+
+- name: Add extra configuration
+  template: src=my.cnf.j2 dest=/etc/mysql/conf.d/my.cnf
+  notify:
+  - restart mysql
+
+- name: Create database
+  mysql_db: 
+    name: "decision2016"
+    state: present
+
+- name: Add a user
+  mysql_user: 
+    name: "{{ db_user }}" 
+    password: "{{ db_pass }}"
+    host: "%"
+    priv: 'decision2016.*:ALL'
+    state: present 
+
+- name: Remove the user
+  mysql_user: 
+    user: "" 
+    state: "absent"

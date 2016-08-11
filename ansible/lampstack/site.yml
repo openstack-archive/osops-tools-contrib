@@ -1,0 +1,31 @@
+---
+
+- name: provision servers
+  hosts: cloud
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles: 
+    - "{{ action }}"
+
+- name: setup database
+  hosts: dbservers
+  user: ubuntu
+  become: true
+  become_user: root
+  roles:
+    - database
+
+- name: setup web servers
+  hosts: webservers
+  user: ubuntu
+  become: true
+  become_user: root
+  roles:
+    - webserver
+
+- name: Inform the installer
+  hosts: cloud
+  connection: local
+  tasks:
+    - debug: msg="Success!!!"
