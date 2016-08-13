@@ -1,0 +1,31 @@
+---
+- name: Haproxy install
+  apt:
+    name="{{ item }}"
+    state=latest
+    update_cache=yes
+  with_items:
+    - haproxy
+
+- name: Enable haproxy service
+  replace:
+    dest: /etc/default/haproxy
+    regexp: "ENABLED=0"
+    replace: "ENABLED=1"
+    backup: no
+
+- name: Place the haproxy configuration file
+  copy:
+    src: templates/haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+
+- name: Add web servers to the haproxy
+  lineinfile:
+    dest: /etc/haproxy/haproxy.cfg
+    line: "    server ws{{ item.openstack.private_v4 }} {{ item.openstack.private_v4 }}:80 check"
+  with_items: "{{ hostvars.cloud.webserver.results }}"
+
+- service: name=haproxy state=restarted enabled=yes
+
