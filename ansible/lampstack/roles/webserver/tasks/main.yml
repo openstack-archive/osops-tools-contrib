@@ -1,0 +1,86 @@
+---
+- name: Apache and php 5
+  apt:
+    name="{{ item }}"
+    state=latest
+    update_cache=yes
+  with_items:
+    - apache2
+    - php5
+    - php5-mysql
+    - nfs-common
+    - unzip
+    - sendmail
+
+- shell: rm -rf /var/www/html/index.html
+  args:
+    warn: no
+
+- name: Creates share directory for wpcontent
+  file:
+    path: /var/www/html/wp-content/uploads
+    state: directory
+    owner: www-data
+    group: www-data
+
+- name: Mount the directory
+  mount:
+    name: /var/www/html/wp-content/uploads
+    src: "{{ hostvars.cloud.database.openstack.private_v4 }}:/storage/wpcontent"
+    state: mounted
+    fstype: nfs
+
+- lineinfile: dest=/etc/apache2/apache2.conf line="ServerName localhost"
+
+- name: Download wordpress
+  get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /var/www/latest.tar.gz
+
+- name: Unpack latest wordpress
+  shell: tar -xf /var/www/latest.tar.gz -C /var/www/html --strip-components=1
+  args:
+    warn: no
+
+- name: Create wordpress configuration
+  shell: cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+  args:
+    warn: no
+
+- name: Configure wordpress
+  replace:
+    dest: /var/www/html/wp-config.php
+    regexp: "'{{ item.then }}'"
+    replace: "'{{ item.now }}'"
+    backup: no
+  with_items:
+    - { then: 'database_name_here', now: 'decision2016' }
+    - { then: 'username_here', now: "{{ db_user }}" }
+    - { then: 'password_here', now: "{{ db_pass }}" }
+    - { then: 'localhost',
+        now: "{{ hostvars.cloud.database.openstack.private_v4 }}"}
+
+- name: Change ownership of wordpress
+  shell: chown -R www-data:www-data /var/www/html
+  args:
+    warn: no
+
+- service: name=apache2 state=restarted enabled=yes
+
+- name: Install wordpress command line tool
+  get_url:
+    url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    dest: /usr/local/bin/wp
+    mode: "a+x"
+    force: no
+
+- name: Download a wordpress theme
+  get_url:
+    url: "{{ app_env.wp_theme }}"
+    dest: /tmp/wptheme.zip
+    force: no
+
+- name: Install the theme
+  shell: unzip -o -q /tmp/wptheme.zip -d /var/www/html/wp-content/themes
+  args:
+    warn: no

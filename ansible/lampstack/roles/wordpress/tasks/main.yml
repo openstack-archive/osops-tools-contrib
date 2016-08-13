@@ -1,0 +1,14 @@
+---
+- name: Install wordpress
+  shell: >
+    wp core install --path=/var/www/html
+    --url="http://{{ hostvars.cloud.balancer.openstack.public_v4 }}"
+    --title='OpenStack Interop Challenge'
+    --admin_user=wpuser
+    --admin_password="{{ db_pass }}"
+    --admin_email='interop@openstack.org'
+
+- name: Activate wordpress theme
+  shell: >
+    wp --path=/var/www/html theme activate
+    "{{ app_env.wp_theme.split('/').pop().split('.')[0] }}"
