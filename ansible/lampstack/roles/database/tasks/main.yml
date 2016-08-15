@@ -1,0 +1,86 @@
+---
+- stat: path=/tmp/diskflag
+  register: diskflag
+
+- shell: val=$(parted -s /dev/vdb mklabel msdos)
+  when: diskflag.stat.exists == false
+
+- shell: val=$(parted -s /dev/vdb mkpart primary ext4 1049kb 100%)
+  when: diskflag.stat.exists == false
+
+- lineinfile: dest=/tmp/diskflag line="disk is now partitioned!" create=yes
+
+- filesystem: fstype=ext4 dev=/dev/vdb1
+- mount: name=/storage src=/dev/vdb1 fstype=ext4 state=mounted
+
+- name: Install mysql and libraries
+  apt:
+    name="{{ item }}"
+    state=latest
+    update_cache=yes
+  with_items:
+    - mysql-server
+    - python-mysqldb
+    - nfs-kernel-server
+    - nfs-common
+    - sipcalc
+
+- shell: ifconfig eth0 | grep 'inet addr:' | cut -d ':' -f 2 | cut -d ' ' -f 1
+  register: local_ip
+
+- shell: sipcalc eth0 | grep 'Network address' | cut -d "-" -f 2 | xargs
+  register: net_addr
+
+- shell: sipcalc eth0 | grep 'Network mask (bits)' | cut -d "-" -f 2 | xargs
+  register: net_bit
+
+- name: Creates share directory for database
+  file: path=/storage/sqldatabase state=directory owner=mysql group=mysql
+
+- name: Creates share directory for wpcontent
+  file: path=/storage/wpcontent state=directory owner=www-data group=www-data
+
+- name: Setup NFS shares
+  lineinfile:
+    dest: /etc/exports
+    line: "{{ item.name }} {{ item.net }}(rw,sync,no_root_squash,no_subtree_check)"
+  with_items:
+    - { name: "/storage/wpcontent",
+        net: "{{ net_addr.stdout }}/{{ net_bit.stdout }}" }
+
+- name: nfs export
+  shell: exportfs -a
+
+- service: name=nfs-kernel-server state=restarted enabled=yes
+- service: name=mysql state=stopped enabled=yes
+
+- name: Configure apparmor
+  replace:
+    dest: /etc/apparmor.d/usr.sbin.mysqld
+    regexp: '\/var\/lib\/mysql\/'
+    replace: '/storage/sqldatabase/'
+    backup: no
+
+- shell: apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
+- shell: cp -R -p /var/lib/mysql/* /storage/sqldatabase
+
+- name: Add extra configuration
+  template: src=my.cnf.j2 dest=/etc/mysql/conf.d/my.cnf
+
+- service: name=mysql state=started enabled=yes
+
+- name: manage database
+  mysql_db:
+    name: "decision2016"
+    state: "{{ item }}"
+  with_items:
+    - ['present', 'absent', 'present']
+
+- name: Add a user
+  mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_pass }}"
+    host: "%"
+    priv: 'decision2016.*:ALL'
+    state: present
+
