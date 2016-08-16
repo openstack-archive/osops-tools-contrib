@@ -1,0 +1,63 @@
+---
+- name: provision servers
+  hosts: cloud
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - "{{ action }}"
+
+- name: setup database
+  hosts: dbservers
+  user: ubuntu
+  become: true
+  become_user: root
+  roles:
+    - database
+
+- name: setup web servers
+  hosts: webservers
+  user: ubuntu
+  become: true
+  become_user: root
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - webserver
+
+- name: setup load balancer servers
+  hosts: balancers
+  user: ubuntu
+  become: true
+  become_user: root
+  roles:
+    - balancer
+
+- name: install wordpress
+  hosts: wps
+  user: ubuntu
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - wordpress
+
+- name: clean up resources
+  hosts: cloud
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  tasks:
+    - include: "roles/cleaner/tasks/{{action}}.yml"
+  roles:
+    - cleaner
+
+- name: Inform the installer
+  hosts: cloud
+  connection: local
+  tasks:
+    - debug:
+        msg: >-
+          Access wordpress at
+          http://{{ hostvars.cloud.balancer.openstack.public_v4 }}.
+          wordpress userid is wpuser, password is {{ db_pass }}
+      when: hostvars.cloud.balancer is defined

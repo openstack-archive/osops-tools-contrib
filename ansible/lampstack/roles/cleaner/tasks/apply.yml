@@ -1,0 +1,13 @@
+---
+- os_floating_ip:
+    auth: "{{ auth }}"
+    state: absent
+    floating_ip_address: "{{ database.openstack.public_v4 }}"
+    server: "{{ database.openstack.name }}"
+
+- os_floating_ip:
+    auth: "{{ auth }}"
+    state: absent
+    floating_ip_address: "{{ item.openstack.public_v4 }}"
+    server: "{{ item.openstack.name }}"
+  with_items: "{{ webserver.results }}"

@@ -1,0 +1,20 @@
+---
+auth: {
+  auth_url: "http://9.30.217.9:5000/v3",
+  username: "demo",
+  password: "{{ password }}",
+  domain_name: "default",
+  project_name: "demo"
+}
+
+app_env: {
+  image_name: "vivid 1504",
+  private_net_name: "Bluebox",
+  public_net_name: "internet",
+  flavor_name: "m1.small",
+  public_key_file: "/home/tong/.ssh/id_rsa.pub",
+  stack_size: 4,
+  volume_size: 2,
+  wp_theme: "https://downloads.wordpress.org/theme/iribbon.2.0.65.zip",
+  wp_posts: "http://wpcandy.s3.amazonaws.com/resources/postsxml.zip"
+}
