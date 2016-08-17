@@ -24,7 +24,6 @@ coreos:
         ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name swarm-agent swarm:${swarm_version} join --addr=$COREOS_PRIVATE_IPV4:2376 etcd://$COREOS_PRIVATE_IPV4:2379/docker"
         ExecStop=/usr/bin/docker stop swarm-agent
     - name: swarm-manager.service
-      command: enable
       content: |
         [Unit]
         Description=swarm manager
