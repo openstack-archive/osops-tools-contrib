@@ -1,0 +1,8 @@
+Code-Review+2: Edgar Magana <emagana@gmail.com>
+Workflow+1: Joseph Bajin <jbajin@verisign.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 17 Aug 2016 02:14:22 +0000
+Reviewed-on: https://review.openstack.org/354194
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
