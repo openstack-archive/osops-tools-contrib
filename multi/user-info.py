@@ -19,6 +19,7 @@
 # Update: 2016-04-04 - all regions from keystone v3 api
 
 import sys
+import traceback
 import os
 import argparse
 import keystoneclient
@@ -28,6 +29,12 @@ from keystoneclient.v3 import client as keystone_v3
 from novaclient import client as nova_client
 from cinderclient.v2 import client as cinder_client
 from neutronclient.v2_0 import client as neutron_client
+
+# This will fix proper printing of UTF-8 items
+# But we need a better fix, this is not good
+# http://stackoverflow.com/questions/3828723/why-should-we-not-use-sys-setdefaultencodingutf-8-in-a-py-script
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 def get_environ(key, verbose=False):
     if key not in os.environ:
@@ -271,6 +278,12 @@ def main():
         print "ERROR: not found:", e.message
         sys.exit(1)
 
+    except UnicodeEncodeError as e:
+        print "UnicodeEncodeError"
+        print '-'*60
+        traceback.print_exc(file=sys.stdout)
+        print '-'*60
+        sys.exit(1)
     except Exception as e:
         print "ERROR:", e.message
         sys.exit(1)
