@@ -1,0 +1,10 @@
+Code-Review+1: Rohit Agarwalla <roagarwa@cisco.com>
+Code-Review+2: Edgar Magana <emagana@gmail.com>
+Code-Review+1: Gema Gomez-Solano <gema.gomez-solano@linaro.org>
+Workflow+1: Joseph Bajin <jbajin@verisign.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 31 Aug 2016 19:04:02 +0000
+Reviewed-on: https://review.openstack.org/356586
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
