@@ -2,19 +2,22 @@
 - stat: path=/tmp/diskflag
   register: diskflag
 
-- shell: parted -s /dev/vdb mklabel msdos
+- shell: parted -s "{{ app_env.volume_point }}" mklabel msdos
   when: diskflag.stat.exists == false
 
-- shell: parted -s /dev/vdb mkpart primary ext4 1049kb 100%
+- shell: parted -s "{{ app_env.volume_point }}" mkpart primary ext4 1049kb 100%
   when: diskflag.stat.exists == false
 
 - lineinfile: dest=/tmp/diskflag line="disk is now partitioned!" create=yes
 
-- filesystem: fstype=ext4 dev=/dev/vdb1
-- mount: name=/storage src=/dev/vdb1 fstype=ext4 state=mounted
+- filesystem: fstype=ext4 dev="{{ app_env.volume_point }}1"
+- mount: name=/storage src="{{ app_env.volume_point }}1" fstype=ext4 state=mounted
 
-- shell: ifconfig eth0 | grep 'inet addr:' | cut -d ':' -f 2 | cut -d ' ' -f 1
+- shell: ip -4 -o addr | grep -v '127.0.0.1' | awk 'NR==1{print $4}' | cut -d '/' -f 1
   register: local_ip
+
+- shell: ip -4 -o addr | grep -v '127.0.0.1' | awk 'NR==1{print $2}'
+  register: netcard
 
 - name: Install sipcalc
   apt:
@@ -22,10 +25,10 @@
     state=latest
     update_cache=yes
 
-- shell: sipcalc eth0 | grep 'Network address' | cut -d "-" -f 2 | xargs
+- shell: sipcalc "{{ netcard.stdout }}" | grep 'Network address' | cut -d "-" -f 2 | xargs
   register: net_addr
 
-- shell: sipcalc eth0 | grep 'Network mask (bits)' | cut -d "-" -f 2 | xargs
+- shell: sipcalc "{{ netcard.stdout }}" | grep 'Network mask (bits)' | cut -d "-" -f 2 | xargs
   register: net_bit
 
 - name: Creates share directory for database
