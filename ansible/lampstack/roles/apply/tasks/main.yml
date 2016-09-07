@@ -95,7 +95,7 @@
     auth: "{{ auth }}"
     server: database
     volume: db_volume
-    device: /dev/vdb
+    device: "{{ app_env.volume_point }}"
 
 - name: Create web server nodes to host application
   os_server:
