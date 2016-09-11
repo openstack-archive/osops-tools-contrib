@@ -30,6 +30,9 @@ resource "template_file" "cloud_init" {
 
 resource "template_file" "10_docker_service" {
     template = "templates/10-docker-service.conf"
+    vars {
+        net_device = "${ var.net_device }"
+    }
 }
 
 resource "openstack_networking_floatingip_v2" "coreos" {
