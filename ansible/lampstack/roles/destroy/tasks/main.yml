@@ -1,8 +1,12 @@
 ---
+- name: Get start timestamp
+  set_fact: starttime="{{ ansible_date_time }}"
+
 - name: Delete key pairs
   os_keypair:
     state: "absent"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: "lampstack"
     public_key_file: "{{ app_env.public_key_file }}"
 
@@ -10,6 +14,7 @@
   os_server:
     state: "absent"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: database
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -22,6 +27,7 @@
   os_server:
     state: "absent"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: balancer
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -34,6 +40,7 @@
   os_server:
     state: "absent"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: apache-{{ item }}
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -47,6 +54,7 @@
   os_security_group:
     state: absent
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: lampstack_sg
     description: secuirty group for lampstack
 
@@ -54,5 +62,6 @@
   os_volume:
     state: absent
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     wait: yes
     display_name: db_volume

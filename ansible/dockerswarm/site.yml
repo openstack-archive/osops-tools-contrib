@@ -1,0 +1,33 @@
+---
+- name: prepare for provision
+  hosts: cloud
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - "prep_{{ action }}"
+
+- name: provision swarm nodes
+  hosts: dockerswarm
+  serial: 1
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - "vm_{{ action }}"
+
+- name: setup swarm nodes
+  hosts: dockerswarm
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - "prov_{{ action }}"
+
+- name: post provisioning
+  hosts: cloud
+  connection: local
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - "post_{{ action }}"

@@ -1,0 +1,13 @@
+---
+- name: Get start timestamp
+  set_fact: starttime="{{ ansible_date_time }}"
+
+- name: Add web servers to webservers host group
+  add_host:
+    name: "swarmnode{{ item }}"
+    hostname: "127.0.0.1"
+    groups: dockerswarm
+    host_no: "{{ item }}"
+  with_sequence: count={{ app_env.swarm_size }}
+  no_log: True
+  
