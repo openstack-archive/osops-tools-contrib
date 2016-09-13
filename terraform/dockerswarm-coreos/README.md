@@ -53,6 +53,7 @@ You also want to specify the name of your CoreOS `glance` image as well as flavo
 ```
 image_name = "coreos-alpha-884-0-0"
 network_name = "internal"
+net_device = "eth0"
 floatingip_pool = "external"
 flavor = "m1.medium"
 public_key_path = "~/.ssh/id_rsa.pub"

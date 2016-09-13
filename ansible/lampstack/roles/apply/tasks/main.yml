@@ -1,13 +1,18 @@
 ---
+- name: Get start timestamp
+  set_fact: starttime="{{ ansible_date_time }}"
+
 - name: Retrieve specified flavor
   os_flavor_facts:
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: "{{ app_env.flavor_name }}"
 
 - name: Create a key-pair
   os_keypair:
     state: "present"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: "lampstack"
     public_key_file: "{{ app_env.public_key_file }}"
 
@@ -15,6 +20,7 @@
   os_volume:
     state: present
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     size: "{{ app_env.volume_size }}"
     wait: yes
     display_name: db_volume
@@ -23,6 +29,7 @@
   os_security_group:
     state: present
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: lampstack_sg
     description: secuirty group for lampstack
 
@@ -30,6 +37,7 @@
   os_security_group_rule:
     state: present
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     security_group: lampstack_sg
     protocol: "{{ item.protocol }}"
     direction: "{{ item.dir }}"
@@ -49,6 +57,7 @@
   os_server:
     state: "present"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: database
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -71,6 +80,7 @@
   os_server:
     state: "present"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: balancer
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -93,14 +103,16 @@
   os_server_volume:
     state: present
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     server: database
     volume: db_volume
-    device: /dev/vdb
+    device: "{{ app_env.block_device_name }}"
 
 - name: Create web server nodes to host application
   os_server:
     state: "present"
     auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
     name: apache-{{ item }}
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -120,8 +132,10 @@
     name: "{{ item.openstack.public_v4 }}"
     groups: webservers
   with_items: "{{ webserver.results }}"
+  no_log: True
 
 - name: Add one web servers to wps host group
   add_host:
     name: "{{ webserver.results[0].openstack.public_v4 }}"
     groups: wps
+  no_log: True
