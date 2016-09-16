@@ -14,6 +14,8 @@ App     WordPress Server        Apache, PHP, MySQL Client, WordPress
 Data    Database Server         MySQL
 ======  ======================  =====================================
 
+**NOTE:**  The sample WordPress application was tested with CentOS7 and Ubuntu Trusty.  The sample application installation does not currently work with Ubuntu Xenial
+
 -----------------
 Heat File Details
 -----------------
