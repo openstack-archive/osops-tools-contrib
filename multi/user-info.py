@@ -24,11 +24,11 @@ import os
 import argparse
 import keystoneclient
 import novaclient
-import cinderclient
 from keystoneclient.v3 import client as keystone_v3
 from novaclient import client as nova_client
 from cinderclient.v2 import client as cinder_client
 from neutronclient.v2_0 import client as neutron_client
+from glanceclient.v2 import client as glance_client
 
 def get_environ(key, verbose=False):
     if key not in os.environ:
@@ -44,15 +44,12 @@ def get_environ(key, verbose=False):
 
 
 def main():
-    """Shows user info (servers, volumes, snapshots, routers, networks, ...).
+    """Show information (servers, volumes, networks, ...) for a user.
 
-    List a lot of useful info about a user:
-    - all projects he's member of
-    - for each project/region
-        all servers, volumes, snapshots, routers, networks, floating ips, ...
+    Search in all projects the user is member of, and optionally in all regions (-a|--all).
     """
     parser = argparse.ArgumentParser(
-        description="Show information (servers, volumes, networks, ...) for a user. Search in all projects he's member of, and optionally in all regions (-a).")
+        description="Show information (servers, volumes, networks, ...) for a user. Search in all projects the user is member of, and optionally in all regions (-a).")
     parser.add_argument('-a', '--all-regions', help='query all regions', action='store_true')
     parser.add_argument('USERNAME', help="username to search")
     parser.add_argument('-v', '--verbose', help='verbose', action='store_true')
@@ -94,6 +91,7 @@ def main():
     nova_regions = {}
     cinder_regions = {}
     neutron_regions = {}
+    glance_regions = {}
     for region_name in region_names:
         _nova = nova_client.Client(2,
                                    os_username,
@@ -114,6 +112,12 @@ def main():
                                          auth_url=os_auth_url,
                                          region_name=region_name)
         neutron_regions[region_name] = _neutron
+        _glance_endpoint = keystone.service_catalog.url_for(service_type='image',
+                                                            endpoint_type='publicURL',
+                                                            region_name=region_name)
+        _glance = glance_client.Client(endpoint=_glance_endpoint,
+                                       token=keystone.auth_token)
+        glance_regions[region_name] = _glance
 
     try:
         username = args.USERNAME
@@ -131,12 +135,14 @@ def main():
             servers_search_opts = {'all_tenants': True, 'tenant_id': project.id}
             volumes_search_opts = {'all_tenants': True, 'project_id': project.id}
             neutron_search_opts = {'all_tenants': True, 'tenant_id': project.id}
+            glance_search_opts = {'filters': {'owner': project.id } }
             for region in region_names:
 
                 # get clients for region
                 nova = nova_regions[region]
                 cinder = cinder_regions[region]
                 neutron = neutron_regions[region]
+                glance = glance_regions[region]
 
                 # servers
                 project_servers = nova.servers.list(search_opts=servers_search_opts)
@@ -156,6 +162,12 @@ def main():
                 for volume_snapshot in project_volume_snapshots:
                     volume_snapshots[volume_snapshot.id] = volume_snapshot
 
+                # images
+                project_images = glance.images.list(**glance_search_opts)
+                images = {}
+                for image in project_images:
+                    images[image.id] = image
+
                 # floating IPs
                 resp = neutron.list_floatingips(**neutron_search_opts)
                 floatingips = {}
@@ -173,9 +185,9 @@ def main():
                     routers[router['id']] = router
 
                 #
-                # show info
+                # show information
                 #
-                if servers or volumes or volume_snapshots or floatingips or networks or routers:
+                if servers or volumes or volume_snapshots or floatingips or networks or routers or images:
                     print "  Region:", region
                     if servers:
                         print "   Servers:"
@@ -215,6 +227,11 @@ def main():
                         for id, v_snapshot in volume_snapshots.items():
                             v_snapshot_name = v_snapshot.name.rstrip() if v_snapshot.name else 'None'
                             print u"    Snapshot: {} [{}] (Volume: [{}]) {}GB - {}".format(v_snapshot_name, v_snapshot.id, v_snapshot.volume_id, v_snapshot.size, v_snapshot.status.upper())
+
+                    if images:
+                        print "   Images:"
+                        for id, image in images.items():
+                            print u"    Image: {} [{}] (Owner: [{}], Visibility: {})".format(image.name, image.id, image.owner, image.visibility)
 
                     if floatingips:
                         print "   Floating IPs:"
