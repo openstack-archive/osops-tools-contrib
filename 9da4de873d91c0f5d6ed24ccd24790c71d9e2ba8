@@ -1,0 +1,11 @@
+Code-Review+1: Matt Jarvis <matt.jarvis@datacentred.co.uk>
+Code-Review+1: Vincent Legoll <vincent.legoll@iphc.cnrs.fr>
+Code-Review+1: Simon Murray <spjmurray@yahoo.co.uk>
+Code-Review+2: Joseph Bajin <jbajin@verisign.com>
+Workflow+1: Joseph Bajin <jbajin@verisign.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Sat, 17 Sep 2016 02:50:56 +0000
+Reviewed-on: https://review.openstack.org/361308
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
