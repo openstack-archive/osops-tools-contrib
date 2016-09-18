@@ -1,0 +1,22 @@
+---
+horizon_url: "http://9.30.217.9"
+
+auth: {
+  auth_url: "http://9.30.217.9:5000/v3",
+  username: "demo",
+  password: "{{ password }}",
+  domain_name: "default",
+  project_name: "demo"
+}
+
+app_env: {
+  image_name: "CoreOS",
+  region_name: "",
+  private_net_name: "Bluebox",
+  net_device: "eth0",
+  flavor_name: "m1.small",
+  swarm_version: "latest",
+  swarm_size: 3,
+  fqdn: "swarm.example.com",
+  public_key_file: "/home/tong/.ssh/id_rsa.pub"
+}

@@ -1,0 +1,12 @@
+---
+- name: Remove docker swarm nodes
+  os_server:
+    state: "absent"
+    auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
+    name: docker-swarm-{{ host_no }}
+    key_name: "dockerswarm"
+    timeout: 200
+    security_groups: dockerswarm_sg
+    meta:
+      hostname: docker-swarm-{{ host_no }}

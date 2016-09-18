@@ -12,6 +12,8 @@
   user: ubuntu
   become: true
   become_user: root
+  vars_files:
+    - "vars/{{ env }}.yml"
   roles:
     - database
 
@@ -61,3 +63,7 @@
           http://{{ hostvars.cloud.balancer.openstack.public_v4 }}.
           wordpress userid is wpuser, password is {{ db_pass }}
       when: hostvars.cloud.balancer is defined
+    - debug:
+        msg: >-
+          The work load test started at {{ hostvars.cloud.starttime.time }},
+          ended at {{ ansible_date_time.time }}

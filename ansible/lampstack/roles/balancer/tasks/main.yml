@@ -24,8 +24,12 @@
 - name: Add web servers to the haproxy
   lineinfile:
     dest: /etc/haproxy/haproxy.cfg
-    line: "    server ws{{ item.openstack.private_v4 }} {{ item.openstack.private_v4 }}:80 check"
-  with_items: "{{ hostvars.cloud.webserver.results }}"
+    line: "    server ws{{ item[0].openstack[item[1]] }} {{ item[0].openstack[item[1]] }}:80 check"
+  with_nested:
+    - "{{ hostvars.cloud.webserver.results }}"
+    - ["private_v4", "public_v4"]
+  when: item[0].openstack[item[1]] != ''
+  no_log: True
 
 - service: name=haproxy state=restarted enabled=yes
 

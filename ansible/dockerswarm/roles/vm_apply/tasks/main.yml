@@ -1,0 +1,19 @@
+---
+- name: Create docker swarm nodes
+  os_server:
+    state: "present"
+    auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
+    name: docker-swarm-{{ host_no }}
+    image: "{{ app_env.image_name }}"
+    key_name: "dockerswarm"
+    timeout: 200
+    flavor: "{{ hostvars.cloud.openstack_flavors[0].id }}"
+    network: "{{ app_env.private_net_name }}"
+    auto_ip: yes
+    userdata: "{{ lookup('file', '/tmp/' +env+ '/cloudinit') }}"
+    security_groups: dockerswarm_sg
+    meta:
+      hostname: docker-swarm-{{ host_no }}
+  register: swarmnode
+

@@ -10,6 +10,11 @@ variable "floatingip_pool" {
     default = "external"
 }
 
+variable "net_device" {
+  description = "Network interface device in the system"
+  default = "eth0"
+}
+
 variable "flavor" {
     default = "m1.medium"
 }

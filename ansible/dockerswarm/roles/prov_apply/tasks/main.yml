@@ -1,0 +1,34 @@
+---
+- name: Get public IP
+  set_fact: node_ip="{{ swarmnode.openstack.public_v4 }}"
+
+- name: Make certificate configuration file
+  copy:
+    src: templates/openssl.cnf
+    dest: "/tmp/{{ env }}/{{ node_ip }}/keys/"
+
+- name: Make service file
+  template:
+    src: templates/dockerservice.j2
+    dest: "/tmp/{{ env }}/{{ node_ip }}/keys/dockerservice.cnf"
+
+- name: Create bootstrap file
+  template:
+    src: templates/bootstrap1.j2
+    dest: "/tmp/{{ env }}/{{ node_ip }}/keys/bootstrap.sh"
+  when: swarmnode.openstack.private_v4 == ""
+
+- name: Create bootstrap file
+  template:
+    src: templates/bootstrap2.j2
+    dest: "/tmp/{{ env }}/{{ node_ip }}/keys/bootstrap.sh"
+  when: swarmnode.openstack.private_v4 != ""
+
+- name: Transfer configureation
+  shell: scp -r "/tmp/{{ env }}/{{ node_ip }}/keys" "core@{{ node_ip }}:/home/core"
+
+- name: Transfer certificate file over to the nodes
+  shell: scp -r "/tmp/{{ env }}/keys" "core@{{ node_ip }}:/home/core"
+
+- name: Start services
+  shell: ssh "core@{{ node_ip }}" "sh keys/bootstrap.sh"
