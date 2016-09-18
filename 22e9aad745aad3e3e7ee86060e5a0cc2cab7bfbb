@@ -1,0 +1,11 @@
+Code-Review+1: Kris Lindgren <klindgren@godaddy.com>
+Code-Review+1: Mark T. Voelker <mvoelker@vmware.com>
+Code-Review+1: Luz Cazares <luz.cazares@intel.com>
+Code-Review+2: Joseph Bajin <jbajin@verisign.com>
+Workflow+1: Joseph Bajin <jbajin@verisign.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Sun, 18 Sep 2016 02:01:28 +0000
+Reviewed-on: https://review.openstack.org/366784
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
