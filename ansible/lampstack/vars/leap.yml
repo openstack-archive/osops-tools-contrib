@@ -11,6 +11,7 @@ auth: {
 
 app_env: {
   image_name: "ubuntu-15.04",
+  ssh_user: "ubuntu",
   region_name: "",
   private_net_name: "Bluebox",
   public_net_name: "internet",
