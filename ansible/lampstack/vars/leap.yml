@@ -14,6 +14,7 @@ app_env: {
   region_name: "RegionOne",
   availability_zone: "nova",
   validate_certs: False,
+  ssh_user: "ubuntu",
   private_net_name: "Bluebox",
   flavor_name: "m1.small",
   public_key_file: "/home/tong/.ssh/id_rsa.pub",

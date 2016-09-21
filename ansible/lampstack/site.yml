@@ -9,7 +9,7 @@
 
 - name: setup database
   hosts: dbservers
-  user: ubuntu
+  user: "{{ app_env.ssh_user }}"
   become: true
   become_user: root
   vars_files:
@@ -19,7 +19,7 @@
 
 - name: setup web servers
   hosts: webservers
-  user: ubuntu
+  user: "{{ app_env.ssh_user }}"
   become: true
   become_user: root
   vars_files:
@@ -29,15 +29,17 @@
 
 - name: setup load balancer servers
   hosts: balancers
-  user: ubuntu
+  user: "{{ app_env.ssh_user }}"
   become: true
   become_user: root
+  vars_files:
+    - "vars/{{ env }}.yml"
   roles:
     - balancer
 
 - name: install wordpress
   hosts: wps
-  user: ubuntu
+  user: "{{ app_env.ssh_user }}"
   vars_files:
     - "vars/{{ env }}.yml"
   roles:
