@@ -59,12 +59,14 @@ example::
 
     app_env: {
       image_name: "coreos",
-      region_name: "",
       private_net_name: "",
       net_device: "eth0",
       flavor_name: "m1.small",
       swarm_version: "latest",
       swarm_size: 3,
+      region_name: "RegionOne",
+      availability_zone: "nova",
+      validate_certs: True,
       fqdn: "swarm.example.com",
       public_key_file: "/home/tong/.ssh/id_rsa.pub"
     }
@@ -79,7 +81,8 @@ However, if your cloud supports tenant network and you have more than one
 tenant networks in your account, you will need to specify which tenant network
 to be used, otherwise, the script will error out. To create a large docker
 swarm, change the swarm_size to a large value like 20, the script will create
-a docker swarm with 20 coreos nodes.
+a docker swarm with 20 coreos nodes. You can also specify if you do not want
+to verify server certificate if your server uses self signed certificate.
 
 
 ## Run the script

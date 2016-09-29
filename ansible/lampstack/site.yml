@@ -62,7 +62,15 @@
           Access wordpress at
           http://{{ hostvars.cloud.balancer.openstack.public_v4 }}.
           wordpress userid is wpuser, password is {{ db_pass }}
-      when: hostvars.cloud.balancer is defined
+      when: hostvars.cloud.balancer is defined and
+            hostvars.cloud.balancer.openstack.public_v4 != ""
+    - debug:
+        msg: >-
+          Access wordpress at
+          http://{{ hostvars.cloud.balancer.openstack.private_v4 }}.
+          wordpress userid is wpuser, password is {{ db_pass }}
+      when: hostvars.cloud.balancer is defined and
+            hostvars.cloud.balancer.openstack.public_v4 == ""
     - debug:
         msg: >-
           The work load test started at {{ hostvars.cloud.starttime.time }},

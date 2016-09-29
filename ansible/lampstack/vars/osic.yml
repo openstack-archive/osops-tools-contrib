@@ -1,17 +1,18 @@
 ---
-horizon_url: "https://salesdemo-sjc.openstack.blueboxgrid.com"
+horizon_url: "https://cloud1.osic.org"
 
 auth: {
-  auth_url: "https://salesdemo-sjc.openstack.blueboxgrid.com:5000/v2.0",
+  auth_url: "https://cloud1.osic.org:5000/v3",
   username: "litong01",
   password: "{{ password }}",
-  project_name: "Interop"
+  domain_name: "default",
+  project_name: "interop_challenge"
 }
 
 app_env: {
-  image_name: "ubuntu-15.04",
+  image_name: "ubuntu-server-14.04",
   region_name: "",
-  availability_zone: "",
+  availability_zone: "nova",
   validate_certs: True,
   private_net_name: "interopnet",
   flavor_name: "m1.small",

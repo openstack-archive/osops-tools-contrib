@@ -6,6 +6,8 @@
   os_flavor_facts:
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: "{{ app_env.flavor_name }}"
 
 - name: Create a key-pair
@@ -13,6 +15,8 @@
     state: "present"
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: "lampstack"
     public_key_file: "{{ app_env.public_key_file }}"
 
@@ -21,6 +25,8 @@
     state: present
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     size: "{{ app_env.volume_size }}"
     wait: yes
     display_name: db_volume
@@ -30,6 +36,8 @@
     state: present
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: lampstack_sg
     description: secuirty group for lampstack
 
@@ -38,6 +46,8 @@
     state: present
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     security_group: lampstack_sg
     protocol: "{{ item.protocol }}"
     direction: "{{ item.dir }}"
@@ -58,6 +68,8 @@
     state: "present"
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: database
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -75,12 +87,21 @@
   add_host:
     name: "{{ database.openstack.public_v4 }}"
     groups: dbservers
+  when: database.openstack.public_v4 != ""
+
+- name: Add database node to the dbservers host group
+  add_host:
+    name: "{{ database.openstack.private_v4 }}"
+    groups: dbservers
+  when: database.openstack.public_v4 == ""
 
 - name: Create balancer node
   os_server:
     state: "present"
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: balancer
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -98,12 +119,21 @@
   add_host:
     name: "{{ balancer.openstack.public_v4 }}"
     groups: balancers
+  when: balancer.openstack.public_v4 != ""
+
+- name: Add balancer node to the balancers host group
+  add_host:
+    name: "{{ balancer.openstack.private_v4 }}"
+    groups: balancers
+  when: balancer.openstack.public_v4 == ""
 
 - name: Create a volume for database to save data
   os_server_volume:
     state: present
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     server: database
     volume: db_volume
     device: "{{ app_env.block_device_name }}"
@@ -113,6 +143,8 @@
     state: "present"
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: apache-{{ item }}
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
@@ -131,6 +163,15 @@
   add_host:
     name: "{{ item.openstack.public_v4 }}"
     groups: webservers
+  when: item.openstack.public_v4 != ""
+  with_items: "{{ webserver.results }}"
+  no_log: True
+
+- name: Add web servers to webservers host group
+  add_host:
+    name: "{{ item.openstack.private_v4 }}"
+    groups: webservers
+  when: item.openstack.public_v4 == ""
   with_items: "{{ webserver.results }}"
   no_log: True
 
@@ -138,4 +179,12 @@
   add_host:
     name: "{{ webserver.results[0].openstack.public_v4 }}"
     groups: wps
+  when: webserver.results[0].openstack.public_v4 != ""
+  no_log: True
+
+- name: Add one web servers to wps host group
+  add_host:
+    name: "{{ webserver.results[0].openstack.private_v4 }}"
+    groups: wps
+  when: webserver.results[0].openstack.public_v4 == ""
   no_log: True

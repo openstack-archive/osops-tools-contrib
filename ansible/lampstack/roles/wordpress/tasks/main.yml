@@ -7,6 +7,17 @@
     --admin_user=wpuser
     --admin_password="{{ db_pass }}"
     --admin_email='interop@openstack.org'
+  when: hostvars.cloud.balancer.openstack.public_v4 != ""
+
+- name: Install wordpress
+  shell: >
+    wp core install --path=/var/www/html
+    --url="http://{{ hostvars.cloud.balancer.openstack.private_v4 }}"
+    --title='OpenStack Interop Challenge'
+    --admin_user=wpuser
+    --admin_password="{{ db_pass }}"
+    --admin_email='interop@openstack.org'
+  when: hostvars.cloud.balancer.openstack.public_v4 == ""
 
 - name: Activate wordpress theme
   shell: >

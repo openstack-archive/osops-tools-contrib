@@ -1,6 +1,11 @@
 ---
 - name: Get public IP
   set_fact: node_ip="{{ swarmnode.openstack.public_v4 }}"
+  when: swarmnode.openstack.public_v4 != ""
+
+- name: Get public IP
+  set_fact: node_ip="{{ swarmnode.openstack.private_v4 }}"
+  when: swarmnode.openstack.public_v4 == ""
 
 - name: Make certificate configuration file
   copy:

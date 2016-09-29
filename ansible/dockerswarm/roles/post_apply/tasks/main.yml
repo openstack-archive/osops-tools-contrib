@@ -4,6 +4,14 @@
       export DOCKER_HOST=tcp://{{ hostvars.swarmnode1.swarmnode.openstack.public_v4 }}:2375;
       export DOCKER_TLS_VERIFY=1;
       export DOCKER_CERT_PATH=/tmp/{{ env }}/keys
+  when: hostvars.swarmnode1.swarmnode.openstack.public_v4 != ""
+
+- debug:
+    msg: >-
+      export DOCKER_HOST=tcp://{{ hostvars.swarmnode1.swarmnode.openstack.private_v4 }}:2375;
+      export DOCKER_TLS_VERIFY=1;
+      export DOCKER_CERT_PATH=/tmp/{{ env }}/keys
+  when: hostvars.swarmnode1.swarmnode.openstack.public_v4 == ""
 
 - debug:
     msg: >-

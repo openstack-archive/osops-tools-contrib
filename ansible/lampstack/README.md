@@ -53,10 +53,13 @@ You may create one such file per cloud for your tests.
     }
 
     app_env: {
-      image_name: "trusty 1404",
-      private_net_name: "Bluebox",
-      public_net_name: "internet",
-      public_key_file: "/home/ubuntu/.ssh/id_rsa.pub",
+      image_name: "ubuntu-15.04",
+      region_name: "RegionOne",
+      availability_zone: "nova",
+      validate_certs: True,
+      private_net_name: "my_tenant_net",
+      flavor_name: "m1.small",
+      public_key_file: "/home/tong/.ssh/id_rsa.pub",
       stack_size: 4,
       volume_size: 2,
       block_device_name: "/dev/vdb",
@@ -66,7 +69,15 @@ You may create one such file per cloud for your tests.
 
 
 The values of these variables should be provided by your cloud provider. When
-use keystone 2.0 API, you will not need to setup domain name.
+use keystone 2.0 API, you will not need to setup domain name. You can leave
+region_name empty if you have just one region. You can also leave
+private_net_name empty if your cloud does not support tenant network or you
+only have one tenant network. The private_net_name is only needed when you
+have multiple tenant networks. validate_certs should be normally set to True
+when your cloud uses tls(ssl) and your cloud is not using self signed
+certificate. If your cloud is using self signed certificate, then the
+certificate can not be easily validated by ansible. You can skip it by setting
+the parameter to False.
 
 
 ## Provision the LAMP stack

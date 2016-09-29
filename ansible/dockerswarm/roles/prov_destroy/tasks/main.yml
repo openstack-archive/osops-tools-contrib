@@ -4,6 +4,8 @@
     state: "absent"
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: docker-swarm-{{ host_no }}
     key_name: "dockerswarm"
     timeout: 200

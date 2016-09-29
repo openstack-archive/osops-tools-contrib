@@ -36,6 +36,8 @@
   os_flavor_facts:
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: "{{ app_env.flavor_name }}"
 
 - name: Create a key-pair
@@ -43,6 +45,8 @@
     state: "present"
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: "dockerswarm"
     public_key_file: "{{ app_env.public_key_file }}"
 
@@ -51,6 +55,8 @@
     state: present
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     name: dockerswarm_sg
     description: secuirty group for dockerswarm
 
@@ -59,6 +65,8 @@
     state: present
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
     security_group: dockerswarm_sg
     protocol: "{{ item.protocol }}"
     direction: "{{ item.dir }}"
