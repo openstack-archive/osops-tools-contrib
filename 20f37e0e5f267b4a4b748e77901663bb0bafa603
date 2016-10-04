@@ -1,0 +1,10 @@
+Code-Review+1: Rohit Agarwalla <roagarwa@cisco.com>
+Code-Review+1: Luz Cazares <luz.cazares@intel.com>
+Code-Review+2: Joseph Bajin <jbajin@verisign.com>
+Workflow+1: Joseph Bajin <jbajin@verisign.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 04 Oct 2016 15:24:13 +0000
+Reviewed-on: https://review.openstack.org/379116
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
