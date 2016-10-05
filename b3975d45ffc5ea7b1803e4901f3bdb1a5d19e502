@@ -1,0 +1,9 @@
+Code-Review+1: Luz Cazares <luz.cazares@intel.com>
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Workflow+1: Mike Dorman <mdorman@godaddy.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 05 Oct 2016 23:32:31 +0000
+Reviewed-on: https://review.openstack.org/382216
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
