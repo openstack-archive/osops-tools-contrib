@@ -2,6 +2,12 @@
 - stat: path=/tmp/diskflag
   register: diskflag
 
+- name: install scsitools
+  package: name=scsitools state=latest
+
+- shell: /sbin/rescan-scsi-bus
+  when: diskflag.stat.exists == false
+
 - shell: parted -s "{{ app_env.block_device_name }}" mklabel msdos
   when: diskflag.stat.exists == false
 
