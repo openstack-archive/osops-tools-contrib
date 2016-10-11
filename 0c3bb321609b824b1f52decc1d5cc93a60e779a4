@@ -1,0 +1,10 @@
+Code-Review+1: Dong Ma <winterma.dong@gmail.com>
+Code-Review+1: Daniel Mellado <dmellado@redhat.com>
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Workflow+1: Mike Dorman <mdorman@godaddy.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 11 Oct 2016 16:25:37 +0000
+Reviewed-on: https://review.openstack.org/384733
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
