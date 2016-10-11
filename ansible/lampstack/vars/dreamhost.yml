@@ -15,7 +15,7 @@ app_env: {
   private_net_name: "",
   validate_certs: False,
   availability_zone: "iad-2",
-  flavor_name: "gp1.subsonic",
+  flavor_name: "gp1.supersonic",
   public_key_file: "/home/reed/.ssh/id_rsa.pub",
   stack_size: 4,
   volume_size: 10,
