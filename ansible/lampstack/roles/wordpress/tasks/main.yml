@@ -24,10 +24,16 @@
     wp --path=/var/www/html theme activate
     "{{ app_env.wp_theme.split('/').pop().split('.')[0] }}"
 
-- name: Install wordpress importor plugin
+- name: Download wordpress importer plugin
+  get_url:
+    url: "http://downloads.wordpress.org/plugin/wordpress-importer.0.6.3.zip"
+    dest: /tmp/wordpress-importer.zip
+    force: yes
+
+- name: Install wordpress importer plugin
   shell: >
     sudo -u www-data wp --path=/var/www/html
-    plugin install wordpress-importer --activate
+    plugin install /tmp/wordpress-importer.zip --activate
   args:
     warn: no
 

@@ -16,6 +16,7 @@
     - "vars/{{ env }}.yml"
   roles:
     - database
+  environment: "{{proxy_env}}"
 
 - name: setup web servers
   hosts: webservers
@@ -26,6 +27,7 @@
     - "vars/{{ env }}.yml"
   roles:
     - webserver
+  environment: "{{proxy_env}}"
 
 - name: setup load balancer servers
   hosts: balancers
@@ -36,6 +38,7 @@
     - "vars/{{ env }}.yml"
   roles:
     - balancer
+  environment: "{{proxy_env}}"
 
 - name: install wordpress
   hosts: wps
@@ -44,6 +47,7 @@
     - "vars/{{ env }}.yml"
   roles:
     - wordpress
+  environment: "{{proxy_env}}"
 
 - name: clean up resources
   hosts: cloud
@@ -54,6 +58,7 @@
     - include: "roles/cleaner/tasks/{{action}}.yml"
   roles:
     - cleaner
+  environment: "{{proxy_env}}"
 
 - name: Inform the installer
   hosts: cloud
