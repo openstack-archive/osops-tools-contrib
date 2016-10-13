@@ -81,6 +81,7 @@
     security_groups: lampstack_sg
     meta:
       hostname: database
+    wait: yes
   register: database
 
 - name: Add database node to the dbservers host group
@@ -113,6 +114,7 @@
     security_groups: lampstack_sg
     meta:
       hostname: balancer
+    wait: yes
   register: balancer
 
 - name: Add balancer node to the balancers host group
@@ -156,6 +158,7 @@
     security_groups: lampstack_sg
     meta:
       hostname: apache-{{ item }}
+    wait: yes
   with_sequence: count={{ app_env.stack_size - 2 }}
   register: webserver
 

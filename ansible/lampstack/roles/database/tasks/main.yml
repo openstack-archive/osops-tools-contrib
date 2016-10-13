@@ -4,9 +4,17 @@
 
 - name: install scsitools
   package: name=scsitools state=latest
+  when: ansible_distribution == 'Ubuntu'
+
+- name: install sg3_utils
+  package: name=sg3_utils state=latest
+  when: ansible_distribution == 'Fedora'
 
 - shell: /sbin/rescan-scsi-bus
-  when: diskflag.stat.exists == false
+  when: diskflag.stat.exists == false and ansible_distribution == 'Ubuntu'
+
+- shell: /bin/rescan-scsi-bus.sh
+  when: diskflag.stat.exists == false and ansible_distribution == 'Fedora'
 
 - shell: parted -s "{{ app_env.block_device_name }}" mklabel msdos
   when: diskflag.stat.exists == false
@@ -32,10 +40,15 @@
   file: path=/var/lib/mysql state=directory
 
 - name: Install NFS server
-  apt:
+  package:
     name=nfs-kernel-server
     state=latest
     update_cache=yes
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Install NFS server
+  package: name=nfs-utils state=latest
+  when: ansible_distribution == 'Fedora'
 
 - name: Setup NFS database access
   lineinfile:
@@ -56,6 +69,10 @@
   shell: exportfs -a
 
 - service: name=nfs-kernel-server state=restarted enabled=yes
+  when: ansible_distribution == 'Ubuntu'
+
+- service: name=nfs-server state=restarted enabled=yes
+  when: ansible_distribution == 'Fedora'
 
 - name: Mount the database data directory
   mount:
@@ -65,15 +82,29 @@
     fstype: nfs
 
 - name: Install mysql and libraries
-  apt:
+  package:
     name="{{ item }}"
     state=latest
     update_cache=yes
   with_items:
     - mysql-server
     - python-mysqldb
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Install mysql and libraries
+  package:
+    name="{{ item }}"
+    state=latest
+  with_items:
+    - mariadb-server
+    - python2-mysql
+  when: ansible_distribution == 'Fedora'
 
 - service: name=mysql state=stopped enabled=yes
+  when: ansible_distribution == 'Ubuntu'
+
+- service: name=mariadb state=stopped enabled=yes
+  when: ansible_distribution == 'Fedora'
 
 - stat: path=/etc/mysql/my.cnf
   register: mysqlflag
@@ -92,12 +123,26 @@
 - name: Configure mysql 5.6+
   replace:
     dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"
-    regexp: '^bind-address[ \t]*=[ ]*127\.0\.0\.1'
     replace: "bind-address  = {{ local_ip.stdout }}"
     backup: no
   when: mysqlflag.stat.exists == true
 
+- stat: path=/etc/my.cnf
+  register: mariadbflag
+
+- name: Configure MariaDB 10.1
+  ini_file:
+    dest=/etc/my.cnf
+    section=mysqld
+    option=bind-address
+    value={{ local_ip.stdout }}
+  when: mariadbflag.stat.exists == true
+
 - service: name=mysql state=started enabled=yes
+  when: ansible_distribution == 'Ubuntu'
+
+- service: name=mariadb state=started enabled=yes
+  when: ansible_distribution == 'Fedora'
 
 - name: create wordpress database
   mysql_db:
@@ -113,4 +158,3 @@
     host: "%"
     priv: 'decision2016.*:ALL'
     state: present
-
