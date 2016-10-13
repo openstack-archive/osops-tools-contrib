@@ -28,7 +28,6 @@
     availability_zone: "{{ app_env.availability_zone }}"
     validate_certs: "{{ app_env.validate_certs }}"
     size: "{{ app_env.volume_size }}"
-    wait: yes
     display_name: db_volume
 
 - name: Create security group

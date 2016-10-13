@@ -1,11 +1,20 @@
 ---
 - name: Haproxy install
-  apt:
+  package:
     name="{{ item }}"
     state=latest
     update_cache=yes
   with_items:
     - haproxy
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Haproxy install
+  package:
+    name="{{ item }}"
+    state=latest
+  with_items:
+    - haproxy
+  when: ansible_distribution == 'Fedora'
 
 - name: Enable haproxy service
   replace:
@@ -13,6 +22,7 @@
     regexp: "ENABLED=0"
     replace: "ENABLED=1"
     backup: no
+  when: ansible_distribution == 'Ubuntu'
 
 - name: Place the haproxy configuration file
   copy:
@@ -20,6 +30,15 @@
     dest: /etc/haproxy/haproxy.cfg
     owner: root
     group: root
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Place the haproxy configuration file
+  copy:
+    src: templates/haproxy_fedora.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+  when: ansible_distribution == 'Fedora'
 
 - name: Add web servers to the haproxy
   lineinfile:
@@ -32,4 +51,3 @@
   no_log: True
 
 - service: name=haproxy state=restarted enabled=yes
-
