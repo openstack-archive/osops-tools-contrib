@@ -1,0 +1,9 @@
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Code-Review+1: Ghe Rivero <ghe.rivero@gmail.com>
+Workflow+1: Mike Dorman <mdorman@godaddy.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 13 Oct 2016 22:04:15 +0000
+Reviewed-on: https://review.openstack.org/385953
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
