@@ -78,6 +78,7 @@
     network: "{{ app_env.private_net_name }}"
     auto_ip: yes
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    config_drive: "{{ app_env.config_drive | default('no') }}"
     security_groups: lampstack_sg
     meta:
       hostname: database
@@ -110,6 +111,7 @@
     network: "{{ app_env.private_net_name }}"
     auto_ip: yes
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    config_drive: "{{ app_env.config_drive | default('no') }}"
     security_groups: lampstack_sg
     meta:
       hostname: balancer
@@ -153,6 +155,7 @@
     network: "{{ app_env.private_net_name }}"
     auto_ip: yes
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    config_drive: "{{ app_env.config_drive | default('no') }}"
     security_groups: lampstack_sg
     meta:
       hostname: apache-{{ item }}
