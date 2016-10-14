@@ -81,6 +81,30 @@
     security_groups: lampstack_sg
     meta:
       hostname: database
+  when:
+    - app_env.public_net_name is undefined
+  register: database
+
+- name: Create database node - public net defined
+  os_server:
+    state: "present"
+    auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
+    name: database
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    flavor: "{{ openstack_flavors[0].id }}"
+    network: "{{ app_env.private_net_name }}"
+    userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    security_groups: lampstack_sg
+    floating_ip_pools: "{{ app_env.public_net_name }}"
+    meta:
+      hostname: database
+  when:
+    - app_env.public_net_name is defined
   register: database
 
 - name: Add database node to the dbservers host group
@@ -113,6 +137,30 @@
     security_groups: lampstack_sg
     meta:
       hostname: balancer
+  when:
+    - app_env.public_net_name is undefined
+  register: balancer
+
+- name: Create balancer node - public net defined
+  os_server:
+    state: "present"
+    auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
+    name: balancer
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    flavor: "{{ openstack_flavors[0].id }}"
+    network: "{{ app_env.private_net_name }}"
+    userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    security_groups: lampstack_sg
+    floating_ip_pools: "{{ app_env.public_net_name }}"
+    meta:
+      hostname: balancer
+  when:
+    - app_env.public_net_name is defined
   register: balancer
 
 - name: Add balancer node to the balancers host group
@@ -156,6 +204,31 @@
     security_groups: lampstack_sg
     meta:
       hostname: apache-{{ item }}
+  when:
+    - app_env.public_net_name is undefined
+  with_sequence: count={{ app_env.stack_size - 2 }}
+  register: webserver
+
+- name: Create web server nodes to host application - public net defined
+  os_server:
+    state: "present"
+    auth: "{{ auth }}"
+    region_name: "{{ app_env.region_name }}"
+    availability_zone: "{{ app_env.availability_zone }}"
+    validate_certs: "{{ app_env.validate_certs }}"
+    name: apache-{{ item }}
+    image: "{{ app_env.image_name }}"
+    key_name: "lampstack"
+    timeout: 200
+    flavor: "{{ openstack_flavors[0].id }}"
+    network: "{{ app_env.private_net_name }}"
+    userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    security_groups: lampstack_sg
+    floating_ip_pools: "{{ app_env.public_net_name }}"
+    meta:
+      hostname: apache-{{ item }}
+  when:
+    - app_env.public_net_name is defined
   with_sequence: count={{ app_env.stack_size - 2 }}
   register: webserver
 
