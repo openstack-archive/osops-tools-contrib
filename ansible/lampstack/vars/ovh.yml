@@ -1,0 +1,25 @@
+---
+horizon_url: "https://horizon.cloud.ovh.net/"
+
+auth: {
+  auth_url: "https://auth.cloud.ovh.net/v2.0",
+  username: "5sAcQ8EqamKq",
+  password: "{{ password }}",
+  project_name: "6987064600428478"
+}
+
+app_env: {
+  ssh_user: "ubuntu",
+  region_name: "SBG1",
+  image_name: "Ubuntu 14.04",
+  private_net_name: "Ext-Net",
+  validate_certs: True,
+  availability_zone: "nova",
+  flavor_name: "eg-15-ssd",
+  public_key_file: "/home/ubuntu/.ssh/id_rsa.pub",
+  stack_size: 4,
+  volume_size: 4,
+  block_device_name: "/dev/vdb",
+  wp_theme: "https://downloads.wordpress.org/theme/iribbon.2.0.65.zip",
+  wp_posts: "http://wpcandy.s3.amazonaws.com/resources/postsxml.zip"
+}
