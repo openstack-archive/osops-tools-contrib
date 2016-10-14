@@ -3,7 +3,10 @@
   register: diskflag
 
 - name: install scsitools
-  package: name=scsitools state=latest
+  apt:
+    name=scsitools
+    state=latest
+    update_cache=yes
 
 - shell: /sbin/rescan-scsi-bus
   when: diskflag.stat.exists == false
