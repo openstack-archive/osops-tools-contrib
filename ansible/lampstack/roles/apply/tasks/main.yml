@@ -76,9 +76,9 @@
     timeout: 200
     flavor: "{{ openstack_flavors[0].id }}"
     network: "{{ app_env.private_net_name }}"
-    auto_ip: yes
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
     security_groups: lampstack_sg
+    floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     meta:
       hostname: database
   register: database
@@ -108,9 +108,9 @@
     timeout: 200
     flavor: "{{ openstack_flavors[0].id }}"
     network: "{{ app_env.private_net_name }}"
-    auto_ip: yes
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
     security_groups: lampstack_sg
+    floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     meta:
       hostname: balancer
   register: balancer
@@ -151,7 +151,7 @@
     timeout: 200
     flavor: "{{ openstack_flavors[0].id }}"
     network: "{{ app_env.private_net_name }}"
-    auto_ip: yes
+    floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
     security_groups: lampstack_sg
     meta:
