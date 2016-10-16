@@ -13,21 +13,20 @@ Will install a single controller node and two compute nodes by default, can incr
 ## Prep
 
 - [Install Terraform](https://www.terraform.io/intro/getting-started/install.html)
-- Upload a CoreOS image to glance. [Instructions Here](https://coreos.com/os/docs/latest/booting-on-openstack.html)
+- Upload a Ubuntu Xenial or CentOS 7 image to glance.
 
 ## Terraform
 
 Terraform will be used to declare and provision a Kubernetes cluster. By default it will be a single controller with a single compute node. You can add more nodes by adjusting the `compute_workers` variable.
 
-The compute workers (for now) do not have a floating ip, this means to `ssh` to them you must `ssh -A` to the controller node first.
+The compute workers do not have a floating ip by default, this means to `ssh` to them you must use the controller node as a bastion and forward your SSH agent through.
 
 ### Prep
 
 Ensure your local ssh-agent is running and your ssh key has been added. This step is required by the terraform provisioner.
 
 ```
-$ eval $(ssh-agent -s)
-$ ssh-add ~/.ssh/id_rsa
+$ eval $(ssh-agent -s); ssh-add ~/.ssh/id_rsa
 ```
 
 Ensure that you have your Openstack credentials loaded into environment variables. Likely via a command similar to:
@@ -36,14 +35,10 @@ Ensure that you have your Openstack credentials loaded into environment variable
 $ source ~/.stackrc
 ```
 
-Edit the terraform.tfvars file to put the name of your CoreOS image, OpenStack network names, etc. You'll also set the Kubernetes versions there. For the hyperkube version, you need to use the tags [here](https://quay.io/repository/coreos/hyperkube?tab=tags).
+Edit the terraform.tfvars file to put the name of your ubuntu/centos image, OpenStack network names, etc.  If you use centos you will also have to change `ssh_user` to `centos`.
 
 
 ### Provision the Kubernetes Cluster
-
-If you wish to re-use previously generated SSL key/certs for CA and admin, simply add `-var "generate_ssl=0" \`.
-
-It can take some time for the `kubernetes-api` to come online.  Do not be surprised if you see a series of failed `curl` commands, this is just a `terraform` provisioning script waiting until it can access the api before moving on.
 
 ```
 $ cd terraform
@@ -82,7 +77,7 @@ State path: terraform.tfstate
 
 Outputs:
 
-  kubernetes-controller = $ ssh -A core@xx.xx.xx.xx
+  kubernetes-controller = $ ssh -A ubuntu@xx.xx.xx.xx
 ```
 
 ## Next Steps
@@ -90,65 +85,56 @@ Outputs:
 ### Check its up
 
 ```
-$ ssh -A core@xx.xx.xx.xx
-
-
-$ kubectl config view
-apiVersion: v1
-clusters:
-- cluster:
-    insecure-skip-tls-verify: true
-    server: https://127.0.0.1:6443
-  name: kubernetes
-contexts:
-- context:
-    cluster: kubernetes
-    user: admin
-  name: kubernetes
-current-context: kubernetes
-kind: Config
-preferences: {}
-users:
-- name: admin
-  user:
-    token: kubernetes
+$ ssh -A ubuntu@xx.xx.xx.xx
 
 $ kubectl get nodes
-NAME            STATUS    AGE
-192.168.3.197   Ready     1m
-192.168.3.198   Ready     11s
+NAME                            STATUS    AGE
+kubestack-testing-compute0      Ready     8s
+kubestack-testing-compute1      Ready     6s
+kubestack-testing-controller0   Ready     2m
+
+$ kubectl get pods --all-namespaces
+
 ```
 
 
-### Run a container
+### Run a demo application
 
 ```
-$ kubectl run my-nginx --image=nginx --replicas=1 --port=80
-replicationcontroller "my-nginx" created
+$ git clone https://github.com/microservices-demo/microservices-demo
+$ kubectl apply \
+  -f microservices-demo/deploy/kubernetes/manifests/sock-shop-ns.yml \
+  -f microservices-demo/deploy/kubernetes/manifests
 
-$ kubectl expose rc my-nginx --port=80 --type=LoadBalancer
-service "my-nginx" exposed
+$ kubectl describe svc front-end -n sock-shop
+Name:     front-end
+Namespace:    sock-shop
+Labels:     name=front-end
+Selector:   name=front-end
+Type:     NodePort
+IP:     100.79.5.35
+Port:     <unset> 80/TCP
+NodePort:   <unset> 30768/TCP
+Endpoints:    10.36.0.3:8079
+Session Affinity: None
+```
 
-$ kubectl get svc my-nginx
-NAME       CLUSTER_IP      EXTERNAL_IP   PORT(S)   SELECTOR       AGE
-my-nginx   10.200.43.104                 80/TCP    run=my-nginx   6s
+once its online you can browse to it via the IP of the controller node, or via the endpoint if you're on the k8s controller.
 
-$ kubectl get pods
-NAME             READY     STATUS    RESTARTS   AGE
-my-nginx-k1zoe   1/1       Running   0          1m
-
-$ curl 10.200.43.104
+```
+$ curl -s 10.36.0.3:8079 | head
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-<title>Welcome to nginx!</title>
 
+    <meta charset="utf-8">
+    <meta name="robots" content="all,follow">
+    <meta name="googlebot" content="index,follow,snippet,archive">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="WeaveSocks Demo App">
+(23) Failed writing body
 
-$ kubectl delete rc my-nginx
-replicationcontroller "my-nginx" deleted
-
-$ kubectl delete svc my-nginx
-service "my-nginx" deleted
 ```
 
 ### Install The Dashboard Addon
@@ -156,12 +142,18 @@ service "my-nginx" deleted
 ```
 $ kubectl create -f https://rawgit.com/kubernetes/dashboard/master/src/deploy/kubernetes-dashboard.yaml
 
-deployment "kubernetes-dashboard" created
-You have exposed your service on an external port on all nodes in your
-cluster.  If you want to expose this service to the external internet, you may
-need to set up firewall rules for the service port(s) (tcp:32584) to serve traffic.
+$ kubectl describe svc kubernetes-dashboard -n kube-system
+Name:     kubernetes-dashboard
+Namespace:    kube-system
+Labels:     app=kubernetes-dashboard
+Selector:   app=kubernetes-dashboard
+Type:     NodePort
+IP:     100.64.81.128
+Port:     <unset> 80/TCP
+NodePort:   <unset> 31149/TCP
+Endpoints:    10.44.0.7:9090
+Session Affinity: None
 
-See http://releases.k8s.io/release-1.2/docs/user-guide/services-firewalls.md for more details.
 
 ```
 You can now access the dashboard from your whitelisted IP at:
