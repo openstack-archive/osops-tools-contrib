@@ -2,6 +2,10 @@
 - stat: path=/tmp/diskflag
   register: diskflag
 
+- name: update apt cache
+  apt: update_cache=yes
+  when: ansible_os_family == "Debian"
+
 - name: install scsitools
   package: name=scsitools state=latest
 
@@ -32,10 +36,7 @@
   file: path=/var/lib/mysql state=directory
 
 - name: Install NFS server
-  apt:
-    name=nfs-kernel-server
-    state=latest
-    update_cache=yes
+  package: name=nfs-kernel-server state=latest
 
 - name: Setup NFS database access
   lineinfile:
@@ -65,10 +66,7 @@
     fstype: nfs
 
 - name: Install mysql and libraries
-  apt:
-    name="{{ item }}"
-    state=latest
-    update_cache=yes
+  package: name={{ item }} state=latest
   with_items:
     - mysql-server
     - python-mysqldb
