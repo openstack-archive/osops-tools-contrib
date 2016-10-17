@@ -63,6 +63,7 @@ You may create one such file per cloud for your tests.
       stack_size: 4,
       volume_size: 2,
       block_device_name: "/dev/vdb",
+      config_drive: no,
       wp_theme: "https://downloads.wordpress.org/theme/iribbon.2.0.65.zip",
       wp_posts: "http://wpcandy.s3.amazonaws.com/resources/postsxml.zip"
     }

@@ -77,6 +77,7 @@
     flavor: "{{ openstack_flavors[0].id }}"
     network: "{{ app_env.private_net_name }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    config_drive: "{{ app_env.config_drive | default('no') }}"
     security_groups: lampstack_sg
     floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     meta:
@@ -109,6 +110,7 @@
     flavor: "{{ openstack_flavors[0].id }}"
     network: "{{ app_env.private_net_name }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    config_drive: "{{ app_env.config_drive | default('no') }}"
     security_groups: lampstack_sg
     floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     meta:
@@ -153,6 +155,7 @@
     network: "{{ app_env.private_net_name }}"
     floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
+    config_drive: "{{ app_env.config_drive | default('no') }}"
     security_groups: lampstack_sg
     meta:
       hostname: apache-{{ item }}
