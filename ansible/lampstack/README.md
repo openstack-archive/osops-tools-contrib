@@ -68,6 +68,16 @@ You may create one such file per cloud for your tests.
       wp_posts: "http://wpcandy.s3.amazonaws.com/resources/postsxml.zip"
     }
 
+It's also possible to provide download URL's for wordpress and associated
+other utilities, supporting use of this module in environments with limited
+outbound network access to the Internet (defaults show below):
+
+    app_env: {
+      ...
+      wp_latest: 'https://wordpress.org/latest.tar.gz',
+      wp_cli: 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar',
+      wp_importer: 'http://downloads.wordpress.org/plugin/wordpress-importer.0.6.3.zip'
+    }
 
 The values of these variables should be provided by your cloud provider. When
 use keystone 2.0 API, you will not need to setup domain name. You can leave

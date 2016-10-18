@@ -26,7 +26,7 @@
 
 - name: Download wordpress importer plugin
   get_url:
-    url: "http://downloads.wordpress.org/plugin/wordpress-importer.0.6.3.zip"
+    url: "{{ app_env.wp_importer or 'http://downloads.wordpress.org/plugin/wordpress-importer.0.6.3.zip' }}"
     dest: /tmp/wordpress-importer.zip
     force: yes
 
