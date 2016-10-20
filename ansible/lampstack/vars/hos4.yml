@@ -1,0 +1,26 @@
+---
+horizon_url: "https://10.241.20.5:443"
+
+auth: {
+  auth_url: "http://10.241.144.2:5000/v3",
+  username: "interop_admin",
+  password: "{{ password }}",
+  project_name: "interop",
+  domain_name: "Default"
+}
+
+app_env: {
+  image_name: "ubuntu-trusty",
+  region_name: "region1",
+  private_net_name: "private-net",
+  flavor_name: "m1.small",
+  public_key_file: "/home/ghe.rivero/.ssh/id_rsa.pub",
+  stack_size: 4,
+  volume_size: 2,
+  block_device_name: "/dev/vdb",
+  wp_theme: "https://downloads.wordpress.org/theme/iribbon.2.0.65.zip",
+  wp_posts: "http://wpcandy.s3.amazonaws.com/resources/postsxml.zip",
+  validate_certs: False,
+  availability_zone: "nova"
+}
+
