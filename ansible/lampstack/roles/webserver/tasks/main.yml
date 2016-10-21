@@ -43,7 +43,7 @@
 
 - name: Download wordpress
   get_url:
-    url: "{{ app_env.wp_latest or 'https://wordpress.org/latest.tar.gz' }}"
+    url: "{{ app_env.wp_latest | default('https://wordpress.org/latest.tar.gz') }}"
     dest: /var/www/latest.tar.gz
 
 - name: Unpack latest wordpress
@@ -92,7 +92,7 @@
 
 - name: Install wordpress command line tool
   get_url:
-    url: "{{ app_env.wp_cli or 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar' }}
+    url: "{{ app_env.wp_cli | default('https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar') }}"
     dest: /usr/local/bin/wp
     mode: "a+x"
     force: no
