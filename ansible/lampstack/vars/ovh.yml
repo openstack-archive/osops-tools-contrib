@@ -15,7 +15,7 @@ app_env: {
   private_net_name: "Ext-Net",
   validate_certs: True,
   availability_zone: "nova",
-  flavor_name: "eg-15-ssd",
+  flavor_name: "eg-15-app",
   public_key_file: "/home/ubuntu/.ssh/id_rsa.pub",
   stack_size: 4,
   volume_size: 4,
