@@ -19,6 +19,15 @@
     --admin_email='interop@openstack.org'
   when: hostvars.cloud.balancer.openstack.public_v4 == ""
 
+- name: Install package for automated plugin activation
+  shell: >
+    wp package install itspriddle/wp-cli-tgmpa-plugin
+
+- name: Make an initial request, so that later switch-theme hooks work.
+  shell: >
+    sudo -u www-data wp --path=/var/www/html
+    cron test
+
 - name: Activate wordpress theme
   shell: >
     wp --path=/var/www/html theme activate
@@ -37,13 +46,20 @@
   args:
     warn: no
 
+- name: Install and activate required plugins
+  shell: >
+    sudo -u www-data wp --path=/var/www/html
+    tgmpa-plugin install --all-required --activate
+  args:
+    warn: no
+
 - name: Download wordpress sample posts
   get_url:
     url: "{{ app_env.wp_posts }}"
     dest: /tmp/wpposts.zip
     force: yes
 
-- name: Unpack the post
+- name: Unpack the posts
   shell: unzip -o -q /tmp/wpposts.zip -d /tmp/posts
   args:
     warn: no
@@ -52,3 +68,21 @@
   shell: >
     sudo -u www-data wp --path=/var/www/html
     import /tmp/posts/*.xml --authors=create --quiet
+
+- name: Regenerate thumbnails for the imported posts
+  shell: >
+    sudo -u www-data wp --path=/var/www/html
+    media regenerate --yes --quiet
+
+- name: Trigger post-activation hooks
+  shell: >
+    sudo -u www-data wp --path=/var/www/html
+    cron test
+
+- name: Flush rewrite rules, setup htaccess for nice permalinks
+  shell: >
+    sudo -u www-data
+    WP_CLI_CONFIG_PATH=/var/www/html/wp-content/themes/{{ app_env.wp_theme.split('/').pop().split('.')[0] }}/wp-cli.yml
+    wp --path=/var/www/html
+    rewrite flush --hard
+
