@@ -1,0 +1,9 @@
+Code-Review+1: Tyler Britten <tbritten@us.ibm.com>
+Code-Review+2: Mike Dorman <mdorman@godaddy.com>
+Workflow+1: Mike Dorman <mdorman@godaddy.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 27 Oct 2016 23:02:06 +0000
+Reviewed-on: https://review.openstack.org/387094
+Project: openstack/osops-tools-contrib
+Branch: refs/heads/master
