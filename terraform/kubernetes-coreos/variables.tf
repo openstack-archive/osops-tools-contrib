@@ -1,19 +1,11 @@
-variable "flannel_backend" {
-    default = "vxlan"
-}
-
-variable "flannel_network" {
-    default = "10.10.0.0/16"
-}
-
 variable "kubernetes_image" {
-    default = "kubernetes"
+    default = "ubuntu-xenial"
 }
 
 variable "project" {}
 
-variable "portal_net" {
-    default = "10.200.0.0/16"
+variable "ssh_user" {
+  default = "ubuntu"
 }
 
 variable "compute_count" {
@@ -37,11 +29,7 @@ variable "kubernetes_flavor" {
 }
 
 variable "kubernetes_token" {
-    default = "kubernetes"
-}
-
-variable "kubernetes_user" {
-    default = "admin"
+    default = "5aa3f9.c7acfa51e41f1f7d"
 }
 
 variable "username" {
@@ -68,19 +56,4 @@ variable "public_key_path" {
 variable "whitelist_network" {
   description = "network to allow connectivity from"
   default = "0.0.0.0/0"
-}
-
-variable "kubectl_version" {
-  description = "Version of kubectl binary to download"
-  default = "v1.1.2"
-}
-
-variable "hyperkube_version" {
-  description = "Version of the hypercube container to use"
-  default = "v1.1.2"
-}
-
-variable "generate_ssl" {
-  descripion = "set to 1 to regenerate SSL certificates/keys"
-  default = 1
 }
