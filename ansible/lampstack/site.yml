@@ -7,6 +7,18 @@
   roles:
     - "{{ action }}"
 
+- name: Install python2 for ansible to work
+  hosts: dbservers, webservers, balancers, wps
+  gather_facts: false
+  user: "{{ app_env.ssh_user }}"
+  become: true
+  become_user: root
+  vars_files:
+    - "vars/{{ env }}.yml"
+  roles:
+    - common
+  environment: "{{ proxy_env }}"
+
 - name: setup database
   hosts: dbservers
   user: "{{ app_env.ssh_user }}"

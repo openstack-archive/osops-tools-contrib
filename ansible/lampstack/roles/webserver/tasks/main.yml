@@ -1,6 +1,6 @@
 ---
 - name: Apache and php 5
-  apt:
+  package:
     name="{{ item }}"
     state=latest
     update_cache=yes
@@ -11,6 +11,20 @@
     - nfs-common
     - unzip
     - ssmtp
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Apache and php 5
+  package:
+    name="{{ item }}"
+    state=latest
+  with_items:
+    - httpd
+    - php
+    - php-mysqlnd
+    - nfs-utils
+    - unzip
+    - ssmtp
+  when: ansible_distribution == 'Fedora'
 
 - shell: rm -rf /var/www/html/index.html
   args:
@@ -22,6 +36,15 @@
     state: directory
     owner: www-data
     group: www-data
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Creates share directory for wpcontent
+  file:
+    path: /var/www/html/wp-content/uploads
+    state: directory
+    owner: apache
+    group: apache
+  when: ansible_distribution == 'Fedora'
 
 - name: Mount the directory using private IP
   mount:
@@ -40,6 +63,10 @@
   when: hostvars.cloud.database.openstack.private_v4 == ""
 
 - lineinfile: dest=/etc/apache2/apache2.conf line="ServerName localhost"
+  when: ansible_distribution == 'Ubuntu'
+
+- lineinfile: dest=/etc/httpd/conf/httpd.conf line="ServerName localhost"
+  when: ansible_distribution == 'Fedora'
 
 - name: Download wordpress
   get_url:
@@ -87,8 +114,19 @@
   shell: chown -R www-data:www-data /var/www/html
   args:
     warn: no
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Change ownership of wordpress
+  shell: chown -R apache:apache /var/www/html
+  args:
+    warn: no
+  when: ansible_distribution == 'Fedora'
 
 - service: name=apache2 state=restarted enabled=yes
+  when: ansible_distribution == 'Ubuntu'
+
+- service: name=httpd state=restarted enabled=yes
+  when: ansible_distribution == 'Fedora'
 
 - name: Install wordpress command line tool
   get_url:

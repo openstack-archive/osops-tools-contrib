@@ -36,6 +36,24 @@
     plugin install /tmp/wordpress-importer.zip --activate
   args:
     warn: no
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Install wordpress importer plugin
+  shell: >
+    sudo -u apache /usr/local/bin/wp --path=/var/www/html
+    plugin install /tmp/wordpress-importer.zip
+  args:
+    warn: no
+  when: ansible_distribution == 'Fedora'
+
+- name: Enable wordpress importer plugin
+  shell: >
+    sudo -u apache /usr/local/bin/wp --path=/var/www/html
+    plugin activate wordpress-importer
+  args:
+    warn: no
+  when: ansible_distribution == 'Fedora'
+
 
 - name: Download wordpress sample posts
   get_url:
@@ -52,3 +70,10 @@
   shell: >
     sudo -u www-data wp --path=/var/www/html
     import /tmp/posts/*.xml --authors=create --quiet
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Import wordpress posts
+  shell: >
+    sudo -u apache /usr/local/bin/wp --path=/var/www/html
+    import /tmp/posts/*.xml --authors=create --quiet
+  when: ansible_distribution == 'Fedora'
