@@ -1,48 +1,36 @@
 ---
-- name: Haproxy install
+- name: Install HAproxy
   package:
-    name="{{ item }}"
-    state=latest
-    update_cache=yes
-  with_items:
-    - haproxy
-  when: ansible_distribution == 'Ubuntu'
-
-- name: Haproxy install
-  package:
-    name="{{ item }}"
-    state=latest
-  with_items:
-    - haproxy
-  when: ansible_distribution == 'Fedora'
+    name: "haproxy"
+    state: "present"
 
 - name: Enable haproxy service
   replace:
-    dest: /etc/default/haproxy
+    dest: "/etc/default/haproxy"
     regexp: "ENABLED=0"
     replace: "ENABLED=1"
-    backup: no
+    backup: "no"
   when: ansible_distribution == 'Ubuntu'
 
-- name: Place the haproxy configuration file
+- name: Setup the haproxy configuration file
   copy:
-    src: templates/haproxy.cfg.j2
-    dest: /etc/haproxy/haproxy.cfg
-    owner: root
-    group: root
+    src: "templates/haproxy.cfg.j2"
+    dest: "/etc/haproxy/haproxy.cfg"
+    owner: "root"
+    group: "root"
   when: ansible_distribution == 'Ubuntu'
 
-- name: Place the haproxy configuration file
+- name: Setup the haproxy configuration file
   copy:
-    src: templates/haproxy_fedora.cfg.j2
-    dest: /etc/haproxy/haproxy.cfg
-    owner: root
-    group: root
+    src: "templates/haproxy_fedora.cfg.j2"
+    dest: "/etc/haproxy/haproxy.cfg"
+    owner: "root"
+    group: "root"
   when: ansible_distribution == 'Fedora'
 
-- name: Add web servers to the haproxy
+- name: Add web servers to haproxy
   lineinfile:
-    dest: /etc/haproxy/haproxy.cfg
+    dest: "/etc/haproxy/haproxy.cfg"
     line: "    server ws{{ item[0].openstack[item[1]] }} {{ item[0].openstack[item[1]] }}:80 check"
   with_nested:
     - "{{ hostvars.cloud.webserver.results }}"
@@ -50,4 +38,8 @@
   when: item[0].openstack[item[1]] != ''
   no_log: True
 
-- service: name=haproxy state=restarted enabled=yes
+- name: Ensure HAproxy is restarted
+  service:
+    name: "haproxy"
+    state: "restarted"
+    enabled: "yes"
