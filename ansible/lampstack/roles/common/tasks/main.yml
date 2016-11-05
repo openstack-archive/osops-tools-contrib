@@ -3,17 +3,20 @@
   local_action: wait_for port=22 host="{{ ansible_ssh_host | default(inventory_hostname) }}" search_regex=OpenSSH delay=10
   become: no
 
-- name: Check if running on Fedora
-  raw: "[ -f /etc/fedora-release ]"
-  register: fedora_release
-  ignore_errors: yes
+- name: Install python-dnf when using Fedora
+  raw: dnf install -y python-dnf
+  when: ansible_distribution == 'Fedora'
 
-- name: Install python2 for Ansible
-  raw: dnf install -y python2 python2-dnf libselinux-python
-  register: result
-  until: result|success
-  when: fedora_release.rc == 0
+- name: Ensure python dependencies are installed on RHEL derivatives
+  package:
+    name: "{{ item }}"
+  with_items:
+    - python2
+    - libselinux-python
+  when: ansible_os_family == 'RedHat'
 
 - name: Set SELinux to permisive
-  selinux: policy=targeted state=permissive
-  when: fedora_release.rc == 0
+  selinux:
+    policy: "targeted"
+    state: "permissive"
+  when: ansible_os_family == 'RedHat'

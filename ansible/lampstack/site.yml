@@ -9,7 +9,6 @@
 
 - name: Install python2 for ansible to work
   hosts: dbservers, webservers, balancers, wps
-  gather_facts: false
   user: "{{ app_env.ssh_user }}"
   become: true
   become_user: root
