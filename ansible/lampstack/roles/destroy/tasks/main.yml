@@ -1,6 +1,7 @@
 ---
 - name: Get start timestamp
-  set_fact: starttime="{{ ansible_date_time }}"
+  set_fact:
+    starttime: "{{ ansible_date_time }}"
 
 - name: Delete key pairs
   os_keypair:
