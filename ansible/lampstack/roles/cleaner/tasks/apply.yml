@@ -1,5 +1,6 @@
 ---
-- os_floating_ip:
+- name: Remove floating IP on database server
+  os_floating_ip:
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
     availability_zone: "{{ app_env.availability_zone }}"
@@ -10,7 +11,8 @@
   when: database.openstack.private_v4 != ""
   no_log: True
 
-- os_floating_ip:
+- name: Remove floating IP on web server
+  os_floating_ip:
     auth: "{{ auth }}"
     region_name: "{{ app_env.region_name }}"
     availability_zone: "{{ app_env.availability_zone }}"
