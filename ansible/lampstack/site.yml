@@ -7,9 +7,8 @@
   roles:
     - "{{ action }}"
 
-- name: Install python2 for ansible to work
+- name: Set up common dependencies and configuration
   hosts: dbservers, webservers, balancers, wps
-  gather_facts: false
   user: "{{ app_env.ssh_user }}"
   become: true
   become_user: root
