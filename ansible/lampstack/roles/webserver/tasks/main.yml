@@ -1,9 +1,9 @@
 ---
-- name: Apache and php 5
+- name: Install Apache and php 5
   package:
-    name="{{ item }}"
-    state=latest
-    update_cache=yes
+    name: "{{ item }}"
+    state: "present"
+    update_cache: yes
   with_items:
     - apache2
     - php5
@@ -13,10 +13,10 @@
     - ssmtp
   when: ansible_distribution == 'Ubuntu'
 
-- name: Apache and php 5
+- name: Install Apache and php 5
   package:
-    name="{{ item }}"
-    state=latest
+    name: "{{ item }}"
+    state: "present"
   with_items:
     - httpd
     - php
@@ -26,122 +26,144 @@
     - ssmtp
   when: ansible_distribution == 'Fedora'
 
-- shell: rm -rf /var/www/html/index.html
-  args:
-    warn: no
-
-- name: Creates share directory for wpcontent
+- name: Ensure default index page is absent
   file:
-    path: /var/www/html/wp-content/uploads
-    state: directory
-    owner: www-data
-    group: www-data
+    path: "/var/www/html/index.html"
+    state: "absent"
+
+- name: Create share directory for wpcontent
+  file:
+    path: "/var/www/html/wp-content/uploads"
+    state: "directory"
+    owner: "www-data"
+    group: "www-data"
   when: ansible_distribution == 'Ubuntu'
 
-- name: Creates share directory for wpcontent
+- name: Create share directory for wpcontent
   file:
-    path: /var/www/html/wp-content/uploads
-    state: directory
-    owner: apache
-    group: apache
+    path: "/var/www/html/wp-content/uploads"
+    state: "directory"
+    owner: "apache"
+    group: "apache"
   when: ansible_distribution == 'Fedora'
 
 - name: Mount the directory using private IP
   mount:
-    name: /var/www/html/wp-content/uploads
+    name: "/var/www/html/wp-content/uploads"
     src: "{{ hostvars.cloud.database.openstack.private_v4 }}:/storage/wpcontent"
-    state: mounted
-    fstype: nfs
+    state: "mounted"
+    fstype: "nfs"
   when: hostvars.cloud.database.openstack.private_v4 != ""
 
 - name: Mount the directory using public IP
   mount:
-    name: /var/www/html/wp-content/uploads
+    name: "/var/www/html/wp-content/uploads"
     src: "{{ hostvars.cloud.database.openstack.public_v4 }}:/storage/wpcontent"
-    state: mounted
-    fstype: nfs
+    state: "mounted"
+    fstype: "nfs"
   when: hostvars.cloud.database.openstack.private_v4 == ""
 
-- lineinfile: dest=/etc/apache2/apache2.conf line="ServerName localhost"
+- name: Ensure localhost is an Apache ServerName
+  lineinfile:
+    dest: "/etc/apache2/apache2.conf"
+    line: "ServerName localhost"
   when: ansible_distribution == 'Ubuntu'
 
-- lineinfile: dest=/etc/httpd/conf/httpd.conf line="ServerName localhost"
+- name: Ensure localhost is an Apache ServerName
+  lineinfile:
+    dest: "/etc/httpd/conf/httpd.conf"
+    line: "ServerName localhost"
   when: ansible_distribution == 'Fedora'
 
-- name: Download wordpress
+- name: Download Wordpress
   get_url:
     url: "{{ app_env.wp_latest | default('https://wordpress.org/latest.tar.gz') }}"
-    dest: /var/www/latest.tar.gz
+    dest: "/var/www/latest.tar.gz"
 
-- name: Unpack latest wordpress
-  shell: tar -xf /var/www/latest.tar.gz -C /var/www/html --strip-components=1
+- name: Unpack Wordpress
+  command: tar -xf /var/www/latest.tar.gz -C /var/www/html --strip-components=1
   args:
-    warn: no
+    warn: "no"
 
-- name: Create wordpress configuration
-  shell: cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
-  args:
-    warn: no
+- name: Create Wordpress configuration
+  copy:
+    src: "/var/www/html/wp-config-sample.php"
+    dest: "/var/www/html/wp-config.php"
+    remote_src: "yes"
 
-- name: Configure wordpress database, username and password
+- name: Configure Wordpress database, username and password
   replace:
-    dest: /var/www/html/wp-config.php
+    dest: "/var/www/html/wp-config.php"
     regexp: "'{{ item.then }}'"
     replace: "'{{ item.now }}'"
-    backup: no
+    backup: "no"
   with_items:
     - { then: 'database_name_here', now: 'decision2016' }
     - { then: 'username_here', now: "{{ db_user }}" }
     - { then: 'password_here', now: "{{ db_pass }}" }
 
-- name: Configure wordpress network access using private IP
+- name: Configure Wordpress network access using private IP
   replace:
-    dest: /var/www/html/wp-config.php
+    dest: "/var/www/html/wp-config.php"
     regexp: "'localhost'"
     replace: "'{{ hostvars.cloud.database.openstack.private_v4 }}'"
-    backup: no
+    backup: "no"
   when: hostvars.cloud.database.openstack.private_v4 != ""
 
-- name: Configure wordpress network access using public IP
+- name: Configure Wordpress network access using public IP
   replace:
-    dest: /var/www/html/wp-config.php
+    dest: "/var/www/html/wp-config.php"
     regexp: "'localhost'"
     replace: "'{{ hostvars.cloud.database.openstack.public_v4 }}'"
-    backup: no
+    backup: "no"
   when: hostvars.cloud.database.openstack.private_v4 == ""
 
-- name: Change ownership of wordpress
-  shell: chown -R www-data:www-data /var/www/html
-  args:
-    warn: no
+- name: Change ownership of Wordpress to Apache
+  file:
+    path: "/var/www/html"
+    owner: "www-data"
+    group: "www-data"
+    state: "directory"
+    recurse: "yes"
   when: ansible_distribution == 'Ubuntu'
 
-- name: Change ownership of wordpress
-  shell: chown -R apache:apache /var/www/html
-  args:
-    warn: no
+- name: Change ownership of Wordpress to Apache
+  file:
+    path: "/var/www/html"
+    owner: "apache"
+    group: "apache"
+    state: "directory"
+    recurse: "yes"
   when: ansible_distribution == 'Fedora'
 
-- service: name=apache2 state=restarted enabled=yes
+- name: Ensure Apache is restarted
+  service:
+    name: "apache2"
+    state: "restarted"
+    enabled: "yes"
   when: ansible_distribution == 'Ubuntu'
 
-- service: name=httpd state=restarted enabled=yes
+- name: Ensure Apache is restarted
+  service:
+    name: "httpd"
+    state: "restarted"
+    enabled: "yes"
   when: ansible_distribution == 'Fedora'
 
-- name: Install wordpress command line tool
+- name: Install Wordpress command line tool
   get_url:
     url: "{{ app_env.wp_cli | default('https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar') }}"
-    dest: /usr/local/bin/wp
+    dest: "/usr/local/bin/wp"
     mode: "a+x"
     force: no
 
-- name: Download a wordpress theme
+- name: Download a Wordpress theme
   get_url:
     url: "{{ app_env.wp_theme }}"
-    dest: /tmp/wptheme.zip
+    dest: "/tmp/wptheme.zip"
     force: yes
 
 - name: Install the theme
-  shell: unzip -o -q /tmp/wptheme.zip -d /var/www/html/wp-content/themes
+  command: unzip -o -q /tmp/wptheme.zip -d /var/www/html/wp-content/themes
   args:
     warn: no
