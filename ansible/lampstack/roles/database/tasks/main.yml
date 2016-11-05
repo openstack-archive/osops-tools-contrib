@@ -1,67 +1,100 @@
 ---
-- stat: path=/tmp/diskflag
+- name: Verify if block device has been setup
+  stat:
+    path: "/tmp/diskflag"
   register: diskflag
 
-- name: update apt cache
-  apt: update_cache=yes
+- name: Update apt cache
+  apt:
+    update_cache: "yes"
   when: ansible_os_family == "Debian"
 
-- name: install scsitools
-  package: name=scsitools state=latest
+- name: Install scsitools
+  package:
+    name: "scsitools"
+    state: "present"
   when: ansible_distribution == 'Ubuntu'
 
-- name: install sg3_utils
-  package: name=sg3_utils state=latest
+- name: Install sg3_utils
+  package:
+    name: "sg3_utils"
+    state: "present"
   when: ansible_distribution == 'Fedora'
 
-- shell: /sbin/rescan-scsi-bus
+- name: Rescan SCSI bus to detect new storage
+  command: /sbin/rescan-scsi-bus
   when: diskflag.stat.exists == false and ansible_distribution == 'Ubuntu'
 
-- shell: /bin/rescan-scsi-bus.sh
+- name: Rescan SCSI bus to detect new storage
+  command: /bin/rescan-scsi-bus.sh
   when: diskflag.stat.exists == false and ansible_distribution == 'Fedora'
 
-- shell: parted -s "{{ app_env.block_device_name }}" mklabel msdos
+- name: Create partition table on block device
+  command: parted -s "{{ app_env.block_device_name }}" mklabel msdos
   when: diskflag.stat.exists == false
 
-- shell: parted -s "{{ app_env.block_device_name }}" mkpart primary ext4 1049kb 100%
+- name: Partition the block device
+  command: parted -s "{{ app_env.block_device_name }}" mkpart primary ext4 1049kb 100%
   when: diskflag.stat.exists == false
 
-- lineinfile: dest=/tmp/diskflag line="disk is now partitioned!" create=yes
+- name: Create setup status file
+  lineinfile:
+    dest: "/tmp/diskflag"
+    line: "disk is now partitioned!"
+    create: "yes"
 
-- filesystem: fstype=ext4 dev="{{ app_env.block_device_name }}1"
-- mount: name=/storage src="{{ app_env.block_device_name }}1" fstype=ext4 state=mounted
+- name: Format the block device
+  filesystem:
+    fstype: "ext4"
+    dev: "{{ app_env.block_device_name }}1"
 
-- shell: ip -4 -o addr | grep -v '127.0.0.1' | awk 'NR==1{print $4}' | cut -d '/' -f 1
-  register: local_ip
+- name: Mount the block device
+  mount:
+    name: "/storage"
+    src: "{{ app_env.block_device_name }}1"
+    fstype: "ext4"
+    state: "mounted"
 
-- name: Creates share directory for database
-  file: path=/storage/sqldatabase state=directory
+- name: Create share directory for database
+  file:
+    path: "/storage/sqldatabase"
+    state: "directory"
 
-- name: Creates share directory for wpcontent
-  file: path=/storage/wpcontent state=directory
+- name: Create share directory for wpcontent
+  file:
+    path: "/storage/wpcontent"
+    state: "directory"
 
-- name: Creates directory for database mounting point
-  file: path=/var/lib/mysql state=directory
+- name: Create directory for database mounting point
+  file:
+    path: "/var/lib/mysql"
+    state: "directory"
 
 - name: Install NFS server
   package:
-    name=nfs-kernel-server
-    state=latest
-    update_cache=yes
+    name: "nfs-kernel-server"
+    state: "present"
   when: ansible_distribution == 'Ubuntu'
 
 - name: Install NFS server
-  package: name=nfs-utils state=latest
+  package:
+    name: "nfs-utils"
+    state: "present"
   when: ansible_distribution == 'Fedora'
+
+- name: Register private address
+  shell: ip -4 -o addr | grep -v '127.0.0.1' | awk 'NR==1{print $4}' | cut -d '/' -f 1
+  changed_when: False
+  register: local_ip
 
 - name: Setup NFS database access
   lineinfile:
-    dest: /etc/exports
+    dest: "/etc/exports"
     line: "/storage/sqldatabase {{ local_ip.stdout }}/32(rw,sync,no_root_squash,no_subtree_check)"
 
 - name: Setup NFS webserver access
   lineinfile:
-    dest: /etc/exports
+    dest: "/etc/exports"
     line: "/storage/wpcontent {{ item[0].openstack[item[1]] }}/32(rw,sync,no_root_squash,no_subtree_check)"
   with_nested:
     - "{{ hostvars.cloud.webserver.results }}"
@@ -69,27 +102,34 @@
   when: item[0].openstack[item[1]] != ''
   no_log: True
 
-- name: nfs export
-  shell: exportfs -a
+- name: Export NFS
+  command: exportfs -a
 
-- service: name=nfs-kernel-server state=restarted enabled=yes
+- name: Ensure nfs-kernel-server is restarted
+  service:
+    name: "nfs-kernel-server"
+    state: "restarted"
+    enabled: "yes"
   when: ansible_distribution == 'Ubuntu'
 
-- service: name=nfs-server state=restarted enabled=yes
+- name: Ensure nfs-server is restarted
+  service:
+    name: "nfs-server"
+    state: "restarted"
+    enabled: "yes"
   when: ansible_distribution == 'Fedora'
 
 - name: Mount the database data directory
   mount:
-    name: /var/lib/mysql
+    name: "/var/lib/mysql"
     src: "{{ local_ip.stdout }}:/storage/sqldatabase"
-    state: mounted
-    fstype: nfs
+    state: "mounted"
+    fstype: "nfs"
 
 - name: Install mysql and libraries
   package:
-    name="{{ item }}"
-    state=latest
-    update_cache=yes
+    name: "{{ item }}"
+    state: "present"
   with_items:
     - mysql-server
     - python-mysqldb
@@ -97,20 +137,30 @@
 
 - name: Install mysql and libraries
   package:
-    name="{{ item }}"
-    state=latest
+    name: "{{ item }}"
+    state: "present"
   with_items:
     - mariadb-server
     - python2-mysql
   when: ansible_distribution == 'Fedora'
 
-- service: name=mysql state=stopped enabled=yes
+- name: Ensure mysql is stopped
+  service:
+    name: "mysql"
+    state: "stopped"
+    enabled: "yes"
   when: ansible_distribution == 'Ubuntu'
 
-- service: name=mariadb state=stopped enabled=yes
+- name: Ensure mariadb is stopped
+  service:
+    name: "mariadb"
+    state: "stopped"
+    enabled: "yes"
   when: ansible_distribution == 'Fedora'
 
-- stat: path=/etc/mysql/my.cnf
+- name: Check if we're using MySQL 5.5
+  stat:
+    path: "/etc/mysql/my.cnf"
   register: mysqlflag
 
 - name: Configure mysql 5.5
@@ -118,42 +168,56 @@
     dest: "/etc/mysql/my.cnf"
     regexp: '^bind-address[ \t]*=[ ]*127\.0\.0\.1'
     replace: "bind-address  = {{ local_ip.stdout }}"
-    backup: no
+    backup: "no"
   when: mysqlflag.stat.exists == true
 
-- stat: path=/etc/mysql/mysql.conf.d/mysqld.cnf
+- name: Check if we're using MySQL 5.6
+  stat:
+    path: "/etc/mysql/mysql.conf.d/mysqld.cnf"
   register: mysqlflag
 
 - name: Configure mysql 5.6+
   replace:
     dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     replace: "bind-address  = {{ local_ip.stdout }}"
-    backup: no
+    backup: "no"
   when: mysqlflag.stat.exists == true
 
-- stat: path=/etc/my.cnf
+- name: Check if we're using MariaDB
+  stat:
+    path: "/etc/my.cnf"
   register: mariadbflag
 
 - name: Configure MariaDB 10.1
   ini_file:
-    dest=/etc/my.cnf
-    section=mysqld
-    option=bind-address
-    value={{ local_ip.stdout }}
+    dest: "/etc/my.cnf"
+    section: "mysqld"
+    option: "bind-address"
+    value: "{{ local_ip.stdout }}"
   when: mariadbflag.stat.exists == true
 
-- service: name=mysql state=started enabled=yes
+- name: Ensure MySQL is started
+  service:
+    name: "mysql"
+    state: "started"
+    enabled: "yes"
   when: ansible_distribution == 'Ubuntu'
 
-- service: name=mariadb state=started enabled=yes
+- name: Ensure MariaDB is started
+  service:
+    name: "mariadb"
+    state: "started"
+    enabled: "yes"
   when: ansible_distribution == 'Fedora'
 
-- name: create wordpress database
+- name: Create wordpress database
   mysql_db:
     name: "decision2016"
     state: "{{ item }}"
   with_items:
-    - ['present', 'absent', 'present']
+    - "present"
+    - "absent"
+    - "present"
 
 - name: Add a user
   mysql_user:
@@ -161,4 +225,4 @@
     password: "{{ db_pass }}"
     host: "%"
     priv: 'decision2016.*:ALL'
-    state: present
+    state: "present"
