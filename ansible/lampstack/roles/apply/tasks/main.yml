@@ -74,7 +74,7 @@
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
     timeout: 200
-    flavor: "{{ openstack_flavors[0].id }}"
+    flavor: "{{ app_env.flavor_name }}"
     network: "{{ app_env.private_net_name }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
     config_drive: "{{ app_env.config_drive | default('no') }}"
@@ -107,7 +107,7 @@
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
     timeout: 200
-    flavor: "{{ openstack_flavors[0].id }}"
+    flavor: "{{ app_env.flavor_name }}"
     network: "{{ app_env.private_net_name }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
     config_drive: "{{ app_env.config_drive | default('no') }}"
@@ -151,7 +151,7 @@
     image: "{{ app_env.image_name }}"
     key_name: "lampstack"
     timeout: 200
-    flavor: "{{ openstack_flavors[0].id }}"
+    flavor: "{{ app_env.flavor_name }}"
     network: "{{ app_env.private_net_name }}"
     floating_ip_pools: "{{ app_env.public_net_name | default(omit) }}"
     userdata: "{{ lookup('file', 'templates/userdata.j2') }}"
