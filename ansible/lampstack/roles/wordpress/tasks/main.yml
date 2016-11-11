@@ -1,6 +1,6 @@
 ---
 - name: Install wordpress
-  shell: >
+  command: >
     wp core install --path=/var/www/html
     --url="http://{{ hostvars.cloud.balancer.openstack.public_v4 }}"
     --title='OpenStack Interop Challenge'
@@ -10,7 +10,7 @@
   when: hostvars.cloud.balancer.openstack.public_v4 != ""
 
 - name: Install wordpress
-  shell: >
+  command: >
     wp core install --path=/var/www/html
     --url="http://{{ hostvars.cloud.balancer.openstack.private_v4 }}"
     --title='OpenStack Interop Challenge'
@@ -20,60 +20,54 @@
   when: hostvars.cloud.balancer.openstack.public_v4 == ""
 
 - name: Activate wordpress theme
-  shell: >
+  command: >
     wp --path=/var/www/html theme activate
     "{{ app_env.wp_theme.split('/').pop().split('.')[0] }}"
 
 - name: Download wordpress importer plugin
   get_url:
     url: "{{ app_env.wp_importer | default('http://downloads.wordpress.org/plugin/wordpress-importer.0.6.3.zip') }}"
-    dest: /tmp/wordpress-importer.zip
-    force: yes
+    dest: "/tmp/wordpress-importer.zip"
+    force: "yes"
 
 - name: Install wordpress importer plugin
-  shell: >
-    sudo -u www-data wp --path=/var/www/html
-    plugin install /tmp/wordpress-importer.zip --activate
+  command: >
+    sudo -u www-data wp --path=/var/www/html plugin install /tmp/wordpress-importer.zip --activate
   args:
-    warn: no
+    warn: "no"
   when: ansible_distribution == 'Ubuntu'
 
 - name: Install wordpress importer plugin
-  shell: >
-    sudo -u apache /usr/local/bin/wp --path=/var/www/html
-    plugin install /tmp/wordpress-importer.zip
+  command: >
+    sudo -u apache /usr/local/bin/wp --path=/var/www/html plugin install /tmp/wordpress-importer.zip
   args:
-    warn: no
+    warn: "no"
   when: ansible_distribution == 'Fedora'
 
 - name: Enable wordpress importer plugin
-  shell: >
-    sudo -u apache /usr/local/bin/wp --path=/var/www/html
-    plugin activate wordpress-importer
+  command: >
+    sudo -u apache /usr/local/bin/wp --path=/var/www/html plugin activate wordpress-importer
   args:
-    warn: no
+    warn: "no"
   when: ansible_distribution == 'Fedora'
-
 
 - name: Download wordpress sample posts
   get_url:
     url: "{{ app_env.wp_posts }}"
-    dest: /tmp/wpposts.zip
-    force: yes
+    dest: "/tmp/wpposts.zip"
+    force: "yes"
 
-- name: Unpack the post
-  shell: unzip -o -q /tmp/wpposts.zip -d /tmp/posts
+- name: Unpack the posts
+  command: unzip -o -q /tmp/wpposts.zip -d /tmp/posts
   args:
-    warn: no
+    warn: "no"
 
 - name: Import wordpress posts
-  shell: >
-    sudo -u www-data wp --path=/var/www/html
-    import /tmp/posts/*.xml --authors=create --quiet
+  command: >
+    sudo -u www-data wp --path=/var/www/html import /tmp/posts/*.xml --authors=create --quiet
   when: ansible_distribution == 'Ubuntu'
 
 - name: Import wordpress posts
   shell: >
-    sudo -u apache /usr/local/bin/wp --path=/var/www/html
-    import /tmp/posts/*.xml --authors=create --quiet
+    sudo -u apache /usr/local/bin/wp --path=/var/www/html import /tmp/posts/*.xml --authors=create --quiet
   when: ansible_distribution == 'Fedora'
