@@ -39,7 +39,7 @@
     availability_zone: "{{ app_env.availability_zone }}"
     validate_certs: "{{ app_env.validate_certs }}"
     name: lampstack_sg
-    description: secuirty group for lampstack
+    description: security group for lampstack
 
 - name: Add security rules
   os_security_group_rule:
