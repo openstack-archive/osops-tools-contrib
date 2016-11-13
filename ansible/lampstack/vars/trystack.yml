@@ -14,6 +14,7 @@
 #   under the License.
 #
 
+resources: "{{ playbook_dir }}/resources"
 horizon_url: "https://x86.trystack.org/dashboard/"
 
 auth: {
@@ -32,10 +33,33 @@ app_env: {
   validate_certs: False,
   private_net_name: "private",
   flavor_name: "m1.small",
-  public_key_file: "/root/.ssh/id_rsa.pub",
+  public_key_file: "{{ resources }}/id_rsa.pub",
   stack_size: 4,
   volume_size: 2,
   block_device_name: "/dev/vdb",
   wp_theme: "https://downloads.wordpress.org/theme/iribbon.2.0.65.zip",
   wp_posts: "http://wpcandy.s3.amazonaws.com/resources/postsxml.zip"
 }
+
+images:
+#  fedora25:
+#    name: "fedora25"
+#    url: "https://download.fedoraproject.org/pub/fedora/linux/releases/test/25_Beta/CloudImages/x86_64/images/Fedora-Cloud-Base-25_Beta-1.1.x86_64.qcow2"
+#    file: "Fedora-Cloud-Base-25_Beta-1.1.x86_64.qcow2"
+#    properties:
+#      distro: "fedora"
+#      ssh_user: "fedora"
+#  ubuntu1604:
+#    name: "ubuntu1604"
+#    url: "https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img"
+#    file: "xenial-server-cloudimg-amd64-disk1.img"
+#    properties:
+#      distro: "ubuntu"
+#      ssh_user: "ubuntu"
+  ubuntu1404:
+    name: "ubuntu1404"
+    url: "https://cloud-images.ubuntu.com/trusty/current/trusty-server-cloudimg-amd64-disk1.img"
+    file: "trusty-server-cloudimg-amd64-disk1.img"
+    properties:
+      distro: "ubuntu"
+      ssh_user: "ubuntu"

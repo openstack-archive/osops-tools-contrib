@@ -1,0 +1,107 @@
+---
+#   Copyright Red Hat, Inc. All Rights Reserved.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License"); you may
+#   not use this file except in compliance with the License. You may obtain
+#   a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#   License for the specific language governing permissions and limitations
+#   under the License.
+#
+
+# This playbook creates the basic resources required to get started
+# SSH keypair, images, security rules and the persistent storage volume
+
+- name: Bootstrap pre-requirements
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - "vars/{{ env }}.yml"
+  tasks:
+    - name: Ensure resources directory exists
+      file:
+        path: "{{ resources }}"
+        state: "directory"
+
+    - name: Generate SSH key pair
+      command: ssh-keygen -t rsa -f {{ resources }}/id_rsa -q -N ''
+      args:
+        creates: "{{ resources }}/id_rsa"
+
+    - name: Upload SSH key pair
+      os_keypair:
+        state: "present"
+        auth: "{{ auth }}"
+        region_name: "{{ app_env.region_name }}"
+        availability_zone: "{{ app_env.availability_zone }}"
+        validate_certs: "{{ app_env.validate_certs }}"
+        name: "lampstack"
+        public_key_file: "{{ resources }}/id_rsa.pub"
+
+    - name: Download images
+      get_url:
+        url: "{{ item.value.url }}"
+        dest: "{{ resources }}/{{ item.value.file }}"
+      with_dict: "{{ images }}"
+
+    # -{{ env }} is suffixed to the image name to avoid clashes with images
+    # provided by the cloud
+    - name: Upload images
+      os_image:
+        state: "present"
+        auth: "{{ auth }}"
+        region_name: "{{ app_env.region_name }}"
+        availability_zone: "{{ app_env.availability_zone }}"
+        validate_certs: "{{ app_env.validate_certs }}"
+        name: "{{ item.value.name }}-{{ env }}"
+        filename: "{{ resources }}/{{ item.value.file }}"
+        properties: "{{ item.value.properties }}"
+      with_dict: "{{ images }}"
+
+    - name: Create security group
+      os_security_group:
+        state: "present"
+        auth: "{{ auth }}"
+        region_name: "{{ app_env.region_name }}"
+        availability_zone: "{{ app_env.availability_zone }}"
+        validate_certs: "{{ app_env.validate_certs }}"
+        name: "lampstack_sg"
+        description: "security group for lampstack"
+
+    - name: Add security rules
+      os_security_group_rule:
+        state: "present"
+        auth: "{{ auth }}"
+        region_name: "{{ app_env.region_name }}"
+        availability_zone: "{{ app_env.availability_zone }}"
+        validate_certs: "{{ app_env.validate_certs }}"
+        security_group: "lampstack_sg"
+        protocol: "{{ item.protocol }}"
+        direction: "{{ item.dir }}"
+        port_range_min: "{{ item.p_min }}"
+        port_range_max: "{{ item.p_max }}"
+        remote_ip_prefix: "0.0.0.0/0"
+      with_items:
+        - { p_min: 22, p_max: 22, dir: ingress, protocol: tcp }
+        - { p_min: 80, p_max: 80, dir: ingress, protocol: tcp }
+        - { p_min: 2049, p_max: 2049, dir: ingress, protocol: tcp }
+        - { p_min: 2049, p_max: 2049, dir: egress, protocol: tcp }
+        - { p_min: 3306, p_max: 3306, dir: ingress, protocol: tcp }
+        - { p_min: -1, p_max: -1, dir: ingress, protocol: icmp }
+        - { p_min: -1, p_max: -1, dir: egress, protocol: icmp }
+
+    - name: Create persistent storage volume
+      os_volume:
+        state: "present"
+        auth: "{{ auth }}"
+        region_name: "{{ app_env.region_name }}"
+        availability_zone: "{{ app_env.availability_zone }}"
+        validate_certs: "{{ app_env.validate_certs }}"
+        size: "{{ app_env.volume_size }}"
+        wait: "yes"
+        display_name: "db_volume"

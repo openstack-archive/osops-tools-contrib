@@ -4,3 +4,4 @@ vars/*
 */**/.DS_Store
 */**/._
 */**/*.tfstate*
+resources/
