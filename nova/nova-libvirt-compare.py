@@ -211,6 +211,14 @@ def collect_server_information(nova, verbose=False):
             search_opts={'all_tenants': True})
     return srv
 
+def instance_state_needs_hypervisor(state):
+    """Return true if an instance in this state should have a hypervisor.
+    """
+    if state == 'SHELVED_OFFLOADED':
+        return False
+    else:
+        return True
+
 def report_server_hypervisor_inconsistencies(srv, hyp, verbose=False, note_incomplete=True):
     """Detect and report discrepancies between Nova and hypervisor views
 
@@ -229,16 +237,18 @@ def report_server_hypervisor_inconsistencies(srv, hyp, verbose=False, note_incom
     * an instance has incompatible states between Nova and the hypervisor
     """
     state_mapping = {
-        'ACTIVE':    'running',
-        'SUSPENDED': 'shut off',
-        'SHUTOFF':   'shut off',
-        'PAUSED':    'paused',
+        'ACTIVE':        'running',
+        'VERIFY_RESIZE': 'running',
+        'SUSPENDED':     'shut off',
+        'SHUTOFF':       'shut off',
+        'SHELVED':       'shut off',
+        'PAUSED':        'paused',
     }
     for uuid, s in srv.iteritems():
         nova_status = s.nova_info.status
         hypervisor_name = s.nova_info._info['OS-EXT-SRV-ATTR:hypervisor_hostname']
         if hypervisor_name is None:
-            if note_incomplete:
+            if instance_state_needs_hypervisor(nova_status) and note_incomplete:
                 print(u"Instance {} (Nova status {}) has no hypervisor".
                       format(uuid, nova_status))
         elif hypervisor_name not in hyp:
