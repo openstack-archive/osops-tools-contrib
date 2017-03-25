@@ -1,0 +1,143 @@
+heat_template_version: 2015-04-30
+
+description: Simple template to deploy an ES Cluster
+
+resources:
+  ssh_key:
+    type: "OS::Nova::KeyPair"
+    properties:
+      name: { get_param: "OS::stack_id" }
+      save_private_key: true
+
+  random_string:
+    type: OS::Heat::RandomString
+
+  floating_ip:
+    type: OS::Nova::FloatingIP
+    properties:
+      pool: PublicNetwork
+
+
+  instance_port:
+    type: OS::Neutron::Port
+    properties:
+      network: default
+      security_groups:
+        - default
+
+
+  lb_ha_proxy:
+    type: OS::Nova::Server
+    depends_on: ssh_key
+    properties:
+      name: LB01-HAProxy
+      key_name: { get_resource: ssh_key }
+      image: GNU/Linux Ubuntu Server 14.04 Trusty Tahr x64
+      flavor: e3standard.x1
+      networks:
+        - port: { get_resource: instance_port }
+      user_data:
+        get_file: https://directlink-to-lb-deploy.sh
+
+
+  association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: floating_ip }
+      server_id: { get_resource: lb_ha_proxy }
+
+  instance_port01:
+    depends_on: [ssh_key, lb_ha_proxy]
+    type: OS::Neutron::Port
+    properties:
+      network: default
+      security_groups:
+        - default
+
+
+
+  elastic01:
+    type: OS::Nova::Server
+    depends_on: [ssh_key, lb_ha_proxy]
+    properties:
+      name: ES01
+      key_name: { get_resource: ssh_key }
+      image: GNU/Linux Ubuntu Server 14.04 Trusty Tahr x64
+      flavor: e1standard.x4
+      networks:
+        - port: { get_resource: instance_port01 }
+      user_data:
+        get_file: https://directlink-to-es-deploy.sh
+
+
+
+
+  instance_port02:
+    depends_on: [ssh_key, elastic01]
+    type: OS::Neutron::Port
+    properties:
+      network: default
+      security_groups:
+        - default
+
+
+  elastic02:
+    type: OS::Nova::Server
+    depends_on: [ssh_key, elastic01]
+    properties:
+      name: ES02
+      key_name: { get_resource: ssh_key }
+      image: GNU/Linux Ubuntu Server 14.04 Trusty Tahr x64
+      flavor: e1standard.x4
+      networks:
+        - port: { get_resource: instance_port02 }
+      user_data:
+        get_file: https://directlink-to-es-deploy.sh
+
+
+
+  elastic03:
+    type: OS::Nova::Server
+    depends_on: [ssh_key, elastic02]
+    properties:
+      name: ES03
+      key_name: { get_resource: ssh_key }
+      image: GNU/Linux Ubuntu Server 14.04 Trusty Tahr x64
+      flavor: e1standard.x4
+      networks:
+        - port: { get_resource: instance_port03 }
+      user_data:
+        get_file: https://directlink-to-es-deploy.sh
+
+
+
+
+  instance_port03:
+    depends_on: [ssh_key, elastic02]
+    type: OS::Neutron::Port
+    properties:
+      network: default
+      security_groups:
+        - default
+
+
+
+outputs:
+  private_key:
+    value: { get_attr: [ssh_key, private_key] }
+    description: "SSH Private Key"
+
+  show_instance:
+    description: Floating IP address of server1 in public network
+    value: { get_attr: [ lb_ha_proxy ,  show ] }
+
+
+
+
+
+
+
+
+
+
+
