@@ -1,8 +1,9 @@
-kubernetes_image = "ubuntu-xenial"
-ssh_user = "ubuntu"
+kubernetes_image = "Fedora-Cloud-Base-25-1.3.x86_64"
+ssh_user = "fedora"
 cluster_name = "kubestack-testing"
 public_key_path = "~/.ssh/id_rsa.pub"
-network_name = "internal"
-floatingip_pool = "external"
-
+network_name = "private"
+floatingip_pool = "public"
+compute_count = 1
+kubernetes_flavor = "m1.small"
 project = "kubestack"
