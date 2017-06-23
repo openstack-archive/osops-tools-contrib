@@ -32,7 +32,8 @@ resource "openstack_compute_instance_v2" "controller" {
         source = "files"
         destination = "/tmp/stage"
         connection {
-            user = "${var.ssh_user}"
+          user = "${var.ssh_user}",
+          timeout = "8m"
         }
     }
     provisioner "remote-exec" {
@@ -44,7 +45,8 @@ resource "openstack_compute_instance_v2" "controller" {
           "kubectl apply -f https://git.io/weave-kube"
         ]
         connection {
-            user = "${var.ssh_user}"
+          user = "${var.ssh_user}",
+          timeout = "8m"
         }
     }
     depends_on = [
