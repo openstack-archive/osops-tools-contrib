@@ -19,30 +19,35 @@
 """
 The script checks how many neutron dhcp agents are handling one network and
 spreads load of networks to be similar on all agents in infra.
-
 """
 
+
 import argparse
-import multiprocessing
 import logging
+import multiprocessing
+from multiprocessing import pool
 import os
 import random
+import re
 import sys
 import itertools
 
 from neutronclient.v2_0 import client as neutronclient
 
-
 OS_PREFIX = "OS_"
 OS_REQUIRED_KEYS = [
     'username',
     'password',
-    'tenant_name',
+    'tenant_name|project_name',
     'auth_url',
     'region_name']
 
+# For Newton and newer releases those
+# fields are mandatory.
+OS_NEW_REQUIRED_KEYS = [
+    'user_domain_name',
+    'project_domain_name']
 MAX_ATTEMPTS = 3
-
 DHCP_AGENT_TYPE = "DHCP agent"
 HOST_ID = "binding:host_id"
 RESERVED_DHCP_PORT = "reserved_dhcp_port"
@@ -51,13 +56,42 @@ _CLIENT = None
 _CREDS = {}
 
 
+###
+# Program helper functions
+###
 def get_neutron_client():
     global _CLIENT
     if _CLIENT:
         return _CLIENT
     credentials = get_credentials()
-    _CLIENT = neutronclient.Client(**credentials)
+    credentials['auth_url'] = normalize_auth_url_version(
+        credentials.get('auth_url'))
+    try:
+        # Initialize client for Newton and newer releases
+        # using keystoneauth1.
+        from keystoneauth1.identity import v3
+        from keystoneauth1 import session
+
+        region_name = credentials.pop('region_name', None)
+        auth = v3.Password(**credentials)
+        sess = session.Session(auth=auth)
+
+        _CLIENT = neutronclient.Client(
+            session=sess,
+            region_name=region_name)
+    except ImportError:
+        _CLIENT = neutronclient.Client(**credentials)
     return _CLIENT
+
+
+def normalize_auth_url_version(auth_url):
+    "Normalize auth_url to use v3 auth version"
+    ver3 = re.search('/v3(/)?$', auth_url)
+    ver2 = re.search('/v2.0(/)?$', auth_url)
+    if ver3 or ver2:
+        return auth_url
+    # For non-specific - use v3
+    return auth_url.rstrip('/') + '/v3'
 
 
 def get_credentials():
@@ -65,14 +99,29 @@ def get_credentials():
     if _CREDS:
         return _CREDS
     for key in OS_REQUIRED_KEYS:
-        env_key = OS_PREFIX + key.upper()
-        value = os.environ.get(env_key)
+        key_splitted = key.split('|')
+        if len(key_splitted) == 1:
+            env_key = OS_PREFIX + key.upper()
+            value = os.environ.get(env_key)
+        else:
+            for n_key in key_splitted:
+                env_key = OS_PREFIX + n_key.upper()
+                value = os.environ.get(env_key)
+                if value:
+                    break
         if not value:
             LOG.error("Missing %s in environment vars."
-                     "Openstack environment vars should be loaded before "
-                     "running this script", env_key)
+                      "Openstack environment vars should be loaded before "
+                      "running this script", env_key)
             sys.exit(1)
-        _CREDS[key] = value
+        _CREDS[key if len(key_splitted) == 1 else n_key] = value
+
+    # NOTE(mjozefcz): Add keys required for Newton and newer versions.
+    for key in OS_NEW_REQUIRED_KEYS:
+        env_key = OS_PREFIX + key.upper()
+        value = os.environ.get(env_key)
+        if value:
+            _CREDS[key] = value
     return _CREDS
 
 
@@ -112,20 +161,20 @@ def parse_args():
     def check_positive(value):
         ivalue = int(value)
         if ivalue <= 0:
-             raise argparse.ArgumentTypeError(
+            raise argparse.ArgumentTypeError(
                 "%s is an invalid positive int value" % value)
         return ivalue
 
-    program_description=("This script is working in two stages: \n"
-                         "1. Checking number of DHCP agents for each \n"
-                         "   network and removing some agents if there is \n"
-                         "   too many assigned for network,\n"
-                         "2. Calculating number of networks which every \n"
-                         "   DHCP agent should handle. Balancing networks \n"
-                         "   amont agents that each of them handles \n"
-                         "   similar number of networks.\n\n"
-                         "If --cold-restart is set, the script will do DHCP network \n"
-                         "reassignment for all networks.")
+    program_description = ("This script is working in two stages: \n"
+                           "1. Checking number of DHCP agents for each \n"
+                           "   network and removing some agents if there is \n"
+                           "   too many assigned for network,\n"
+                           "2. Calculating number of networks which every \n"
+                           "   DHCP agent should handle. Balancing networks \n"
+                           "   amont agents that each of them handles \n"
+                           "   similar number of networks.\n\n"
+                           "If --cold-restart is set, the script will do"
+                           "DHCP network\n reassignment for all networks.")
 
     parser = argparse.ArgumentParser(
         description=program_description,
@@ -141,10 +190,12 @@ def parse_args():
     parser.add_argument("--remove-associations", action="store_true",
                         help="Remove all network to DHCP agent associations"),
     parser.add_argument("--add-associations", action="store_true",
-                        help="Delegate all networks to DHCP agents by Round-Robin"),
+                        help="Delegate all networks to DHCP agents "
+                             "by Round-Robin"),
     parser.add_argument("--cold-restart", action="store_true",
-                        help="Remove all network to DHCP agent associations and "
-                             "delegate all networks to DHCP agents by Round-Robin"),
+                        help="Remove all network to DHCP agent associations "
+                             "and delegate all networks to DHCP agents by "
+                             "Round-Robin"),
     parser.add_argument("--debug", action="store_true",
                         help="Enable debug mode")
     parser.add_argument("--verbose", action="store_true",
@@ -154,6 +205,9 @@ def parse_args():
     return parser.parse_args()
 
 
+###
+# Openstack related functions
+###
 def remove_unneccessary_agents(number_of_workers):
     """Remove DHCP agents from handle DHCP service if there is more
     agents than set in MAX_AGENTS_PER_NETWORK.
@@ -165,7 +219,7 @@ def remove_unneccessary_agents(number_of_workers):
     if not networks_agents:
         return
     LOG.info("Cleaning networks from unneccessary DHCP agents")
-    threads_pool = multiprocessing.Pool(processes=number_of_workers)
+    threads_pool = pool.ThreadPool(processes=number_of_workers)
     threads_pool.map(remove_unneccessary_agents_for_network,
                      zip(networks_agents.keys(), networks_agents.values()))
     LOG.info("All networks cleaned")
@@ -217,7 +271,7 @@ def remove_reserved_dhcp_ports(network_id):
     client = get_neutron_client()
     try:
         ports = client.list_ports(network_id=network_id,
-                                device_id=RESERVED_DHCP_PORT)
+                                  device_id=RESERVED_DHCP_PORT)
     except Exception as e:
         LOG.error("Failed to get list of reserved dhcp ports in "
                   "network %(network_id)s; Error: %(err)s",
@@ -226,7 +280,7 @@ def remove_reserved_dhcp_ports(network_id):
 
     for port in ports['ports']:
         LOG.debug("Delete port %(port_id)s from network %(net_id)s",
-                 {'port_id': port['id'], 'net_id': network_id})
+                  {'port_id': port['id'], 'net_id': network_id})
         try:
             client.delete_port(port['id'])
         except Exception as e:
@@ -274,7 +328,7 @@ def associate_networks_to_agents():
                                               live_dhcp_agents)
         if networks_left_to_assign:
             LOG.info("Assignment for some networks failed. "
-                     "Trying again." )
+                     "Trying again.")
             result = \
                 assign_dhcp_networks_to_agents_rr(networks_left_to_assign,
                                                   live_dhcp_agents)
@@ -282,8 +336,8 @@ def associate_networks_to_agents():
                 raise Exception("Some networks needs to be "
                                 "reassigned manually: ", str(result))
     except Exception as e:
-       LOG.error("Error occured during associations: "
-                 "%(err)s", {'err': e})
+        LOG.error("Error occured during associations: "
+                  "%(err)s", {'err': e})
 
     LOG.info("Done network to agent associations")
 
@@ -302,7 +356,7 @@ def assign_dhcp_networks_to_agents_rr(networks_to_assign, dhcp_agents):
     number_of_networks_with_dhcp = len(networks_to_assign)
     number_of_live_dhcp_agents = len(dhcp_agents)
     agent_cycle = itertools.cycle(dhcp_agents)
-    networks_to_reassign  = []
+    networks_to_reassign = []
 
     for network_id in networks_to_assign:
         net, net_agents = get_agents_handled_network(network_id)
@@ -310,25 +364,27 @@ def assign_dhcp_networks_to_agents_rr(networks_to_assign, dhcp_agents):
         if net_agents:
                 agents_for_network = MAX_AGENTS_PER_NETWORK - len(net_agents)
                 if agents_for_network <= 0:
-                    LOG.debug("Failed to assign network %(network_id)s to DHCP Agents "
-                              "- network already assigned", {'network_id': network_id})
+                    LOG.debug("Failed to assign network %(network_id)s to "
+                              "DHCP Agents - network already assigned",
+                              {'network_id': network_id})
                 continue
-        for i in range (0, agents_for_network):
+        for i in range(0, agents_for_network):
             agent_id = agent_cycle.next()
             attempt = 1
             assigned = False
-            while attempt <= MAX_ATTEMPTS and assigned == False:
-                if add_network_to_agent(network_id,agent_id):
-                   assigned = True
-                   continue
+            while attempt <= MAX_ATTEMPTS and not assigned:
+                if add_network_to_agent(network_id, agent_id):
+                    assigned = True
+                    continue
                 else:
-                   if attempt == MAX_ATTEMPTS:
+                    if attempt == MAX_ATTEMPTS:
                         networks_to_reassign.append(network_id)
                         LOG.error("Failed to assign network %(network_id)s to "
                                   "DHCP Agent %(agent_id)s",
-                                  {'network_id': network_id, 'agent_id': agent_id})
+                                  {'network_id': network_id,
+                                   'agent_id': agent_id})
                         break
-                   else:
+                    else:
                         attempt += 1
     return networks_to_reassign
 
@@ -405,7 +461,7 @@ def get_dhcp_agents():
 
     for agent in agents.get("agents", []):
         agent_networks = get_networks_on_agent(agent['id'])
-        if agent.get('alive') == True:
+        if agent.get('alive'):
             live_agents[agent['id']] = agent_networks
         else:
             dead_agents[agent['id']] = agent_networks
@@ -427,7 +483,7 @@ def get_networks_agents(number_of_workers):
     except Exception as e:
         LOG.error("Failed to get list of networks; Error: %s", e)
         return
-    threads_pool = multiprocessing.Pool(processes=number_of_workers)
+    threads_pool = pool.ThreadPool(processes=number_of_workers)
     networks_agents = threads_pool.map(get_agents_handled_network,
                                        networks_ids)
     return dict(networks_agents)
@@ -518,14 +574,15 @@ def remove_all_networks_from_all_agents(number_of_workers):
     dhcp_agents = dict(
         list(live_dhcp_agents.items()) + list(dead_dhcp_agents.items())
     )
-    threads_pool = multiprocessing.Pool(processes=number_of_workers)
+    threads_pool = pool.ThreadPool(processes=number_of_workers)
 
     nets = []
     for agent_id, networks in dhcp_agents.iteritems():
         if len(networks) > 0:
-           nets.extend(networks)
-           threads_pool.map(remove_network_from_agent_wrapper,
-                            itertools.izip(networks,itertools.repeat(agent_id)))
+            nets.extend(networks)
+            threads_pool.map(remove_network_from_agent_wrapper,
+                             itertools.izip(networks,
+                                            itertools.repeat(agent_id)))
     threads_pool.map(remove_reserved_dhcp_ports,
                      set(nets))
     LOG.info("All DHCP Agents cleaned")
@@ -546,7 +603,7 @@ def remove_network_from_agent(network_id, agent_id):
     """
 
     LOG.debug("Removing network %(network_id)s from agent: %(agent_id)s",
-             {'network_id': network_id, 'agent_id': agent_id})
+              {'network_id': network_id, 'agent_id': agent_id})
 
     client = get_neutron_client()
     try:
@@ -622,7 +679,8 @@ def get_list_of_networks_with_dhcp():
     client = get_neutron_client()
     try:
         subnets = client.list_subnets(enable_dhcp=True)
-        networks = [subnet['network_id'] for subnet in subnets.get("subnets", [])]
+        networks = [subnet['network_id']
+                    for subnet in subnets.get("subnets", [])]
     except Exception as e:
         LOG.error("Failed to get list of networks with enable"
                   "dhcp, Error: %(err)s", {'err': e})
@@ -661,6 +719,9 @@ def split_agents(agents, max_networks_on_agent):
     return overloaded, full, free
 
 
+###
+# Main program starts here
+###
 if __name__ == '__main__':
     global MAX_AGENTS_PER_NETWORK
     args = parse_args()
