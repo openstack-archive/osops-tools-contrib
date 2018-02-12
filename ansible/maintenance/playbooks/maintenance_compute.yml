@@ -1,0 +1,25 @@
+---
+
+- name: Run maintenance playbook for each compute host
+  serial: 1
+  hosts: compute
+  vars:               
+    maintenace_role: stub
+  tasks:
+    - name: Migrate instances off of host
+      local_action: shell python "{{ playbook_dir }}"../scripts/nova-compute-maintenance.py "{{ inventory_hostname }}"
+      retries: 5
+      delay: 3
+      register: result
+      until: result.rc == 0
+
+    - name: Check that host is fully migrated
+      debug: msg="TODO"
+
+    - name: Include the maintenance role
+      include_role:
+        name: "{{ maintenance_role }}"
+
+    - name: Mark host as online
+      local_action: shell openstack compute service set --enable "{{ inventory_hostname }}" nova-compute
+

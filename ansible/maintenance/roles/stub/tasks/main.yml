@@ -1,0 +1,4 @@
+---
+
+name: Stub task
+debug: msg="Please include your own maintenance role using the maintenace_role var!"
