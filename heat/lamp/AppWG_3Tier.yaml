@@ -4,7 +4,7 @@ heat_template_version: 2016-04-08
 
 description: >
   This is the main Heat template for the 3-tier LAMP Workload created by the Enterprise WG.
-  This version of the tempalte does not include autoscaling, and does not require ceilometer.
+  This version of the template does not include autoscaling, and does not require ceilometer.
   This template calls multiple nested templates which actually do the
   majority of the work.  This file calls the following yaml files in a ./lib subdirectory
     setup_net_sg.yaml sets up the security groups and networks for Web, App, and Database
