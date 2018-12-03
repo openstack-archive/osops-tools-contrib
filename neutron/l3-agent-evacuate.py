@@ -53,6 +53,7 @@ def main():
     parser.add_argument('-f', '--from-l3agent', help='l3agent uuid', required=True)
     parser.add_argument('-t', '--to-l3agent', help='l3agent uuid', required=True)
     parser.add_argument('-r', '--router', help='specific router')
+    parser.add_argument('-s', '--sleep', help='sleep interval in seconds')
     parser.add_argument('-l', '--limit', help='max number of routers to migrate')
     parser.add_argument('-v', '--verbose', help='verbose', action='store_true')
     args = parser.parse_args()
@@ -72,14 +73,14 @@ def main():
         limit = 0
 
     #Validate agent's UUID
-    validateargs(api, os_region_name, args.from_l3agent, args.to_l3agent, args.router)
+    validateargs(api, os_region_name, args.from_l3agent, args.to_l3agent, args.router, args.sleep)
 
     if args.router:
         moverouter(api, os_region_name, args.from_l3agent, args.to_l3agent, args.router)
     else:
         evacuate_l3_agent(api, os_region_name, args.from_l3agent, args.to_l3agent, limit)
 
-def validateargs(api, region, from_agent, to_agent, router):
+def validateargs(api, region, from_agent, to_agent, router, sleep):
     neutron = api.neutron(region)
     l3_agents_uuids=[]
     routers_uuids=[]
@@ -107,6 +108,8 @@ def validateargs(api, region, from_agent, to_agent, router):
             print "Wrong from_agent for specified router"
             sys.exit(1)
 
+    if sleep < 0:
+        print "Need to have non-negative amount of sleep!"
 
 def moverouter(api, region, from_agent, to_agent, router):
     neutron = api.neutron(region)
@@ -139,7 +142,7 @@ def evacuate_l3_agent(api, region, from_agent, to_agent, limit):
         neutron.remove_router_from_l3_agent(from_agent, r['id'])
         print "Adding   router %s" % r['id']
         neutron.add_router_to_l3_agent(to_agent, r_id)
-        time.sleep(10)
+        time.sleep(sleep)
 
 
 
