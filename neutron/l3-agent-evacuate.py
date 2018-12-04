@@ -135,7 +135,7 @@ def evacuate_l3_agent(api, region, from_agent, to_agent, limit):
         sys.exit(1)
     if limit and (len(ha_false_routers) > limit):
         ha_false_routers = ha_false_routers[0:limit]
-    print "Starting ... Moving a router every 10 seconds\n"
+    print ("Starting ... Moving a router every %s seconds\n" % sleep)
     for r in ha_false_routers:
         r_id = {'router_id': r['id']}
         print "Removing router %s" % r['id']
