@@ -78,7 +78,7 @@ def main():
     if args.router:
         moverouter(api, os_region_name, args.from_l3agent, args.to_l3agent, args.router)
     else:
-        evacuate_l3_agent(api, os_region_name, args.from_l3agent, args.to_l3agent, limit)
+        evacuate_l3_agent(api, os_region_name, args.from_l3agent, args.to_l3agent, limit, args.sleep)
 
 def validateargs(api, region, from_agent, to_agent, router, sleep):
     neutron = api.neutron(region)
@@ -119,7 +119,7 @@ def moverouter(api, region, from_agent, to_agent, router):
     print "Adding   router %s" % router
     neutron.add_router_to_l3_agent(to_agent, r_id)
 
-def evacuate_l3_agent(api, region, from_agent, to_agent, limit):
+def evacuate_l3_agent(api, region, from_agent, to_agent, limit, sleep):
     """Evacuate"""
     neutron = api.neutron(region)
     routers = neutron.list_routers_on_l3_agent(from_agent)["routers"]
@@ -142,7 +142,7 @@ def evacuate_l3_agent(api, region, from_agent, to_agent, limit):
         neutron.remove_router_from_l3_agent(from_agent, r['id'])
         print "Adding   router %s" % r['id']
         neutron.add_router_to_l3_agent(to_agent, r_id)
-        time.sleep(sleep)
+        time.sleep(float(sleep))
 
 
 
