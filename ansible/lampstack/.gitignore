@@ -1,6 +1,0 @@
-*.out
-vars/*
-*/**/*.log
-*/**/.DS_Store
-*/**/._
-*/**/*.tfstate*

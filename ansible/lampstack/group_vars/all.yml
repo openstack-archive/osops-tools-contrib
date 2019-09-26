@@ -1,7 +1,0 @@
----
-db_user: "wpdbuser"
-db_pass: "{{ lookup('password',
-             '/tmp/sqlpassword chars=ascii_letters,digits length=8') }}"
-
-proxy_env: {
-}

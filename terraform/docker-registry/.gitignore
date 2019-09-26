@@ -1,8 +1,0 @@
-*.tfstate
-*.tfstate.backup
-templates/discovery_url
-*.override
-files/ssl/client*
-files/ssl/ca*
-files/ssl*.pem
-files/ssl/*.csr

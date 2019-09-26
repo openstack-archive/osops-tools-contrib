@@ -1,6 +1,0 @@
-*.tfstate
-*.tfstate.backup
-templates/discovery_url
-*.override
-ssl/admin*
-ssl/ca*
